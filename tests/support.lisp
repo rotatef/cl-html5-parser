@@ -24,7 +24,7 @@
   (directory (merge-pathnames (make-pathname :directory `(:relative ,subdirectory)
                                              :name :wild
                                              :type type)
-                              (asdf:system-relative-pathname :html5-parser "tests/testdata/"))))
+                              (asdf:system-relative-pathname :cl-html5-parser-tests "testdata/"))))
 
 (defun parse-test-part (in)
   (let ((line (read-line in nil)))

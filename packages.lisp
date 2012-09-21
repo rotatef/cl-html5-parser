@@ -104,11 +104,3 @@
   (:export
    #:parse-html5
    #:parse-html5-fragment))
-
-(defpackage :html5-parser-tests
-  (:use
-   :common-lisp
-   :html5-tree
-   :html5-parser
-   :cl-ppcre
-   :stefil))

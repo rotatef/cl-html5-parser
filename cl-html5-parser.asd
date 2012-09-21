@@ -19,26 +19,30 @@
 ;;;;  along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 (defsystem #:cl-html5-parser
-    :name "cl-html5-parser"
-    :licence "GNU Lesser General Public License"
-    :depends-on (:cl-ppcre :cl-json :flexi-streams :stefil :split-sequence)
-    :serial t
-    :components ((:file "package")
-                 (:file "constants")
-                 (:file "entities")
-                 (:file "inputstream")
-                 (:file "tokenizer")
-                 (:file "treebuilder")
-                 (:file "html5-parser-class")
-                 (:file "tree-help")
-                 (:file "html5-parser")
-                 (:file "simple-tree")
-                 (:module tests
-                          :serial t
-                          :components
-                          ((:file "support")
-                           (:file "test-inputstream")
-                           (:file "test-tokenizer")
-                           (:file "test-tree-builder")
-                           (:file "test-parser")
-                           (:file "run-tests")))))
+  :name "cl-html5-parser"
+  :licence "GNU Lesser General Public License"
+  :depends-on (:cl-ppcre :flexi-streams)
+  :serial t
+  :components ((:file "packages")
+               (:file "constants")
+               (:file "entities")
+               (:file "inputstream")
+               (:file "tokenizer")
+               (:file "treebuilder")
+               (:file "html5-parser-class")
+               (:file "tree-help")
+               (:file "html5-parser")
+               (:file "simple-tree")))
+
+(defsystem #:cl-html5-parser-tests
+  :depends-on (:cl-html5-parser :stefil :cl-json :split-sequence)
+  :components ((:module tests
+                        :serial t
+                        :components
+                        ((:file "packages")
+                         (:file "support")
+                         (:file "test-inputstream")
+                         (:file "test-tokenizer")
+                         (:file "test-tree-builder")
+                         (:file "test-parser")
+                         (:file "run-tests")))))
