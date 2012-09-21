@@ -136,6 +136,6 @@ The function is called with one paramater, a child node."))
               attrs
               (mapcar (lambda (c)
                         (tree-to-xmls tree c include-namespace-p))
-                      children))))
+                      (nreverse children)))))
     ((:text :comment)
      (node-value tree node))))
