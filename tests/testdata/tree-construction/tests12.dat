@@ -1,0 +1,62 @@
+#data
+<!DOCTYPE html><body><p>foo<math><mtext><i>baz</i></mtext><annotation-xml><svg><desc><b>eggs</b></desc><g><foreignObject><P>spam<TABLE><tr><td><img></td></table></foreignObject></g><g>quux</g></svg></annotation-xml></math>bar
+#errors
+#document
+| <!DOCTYPE html>
+| <html>
+|   <head>
+|   <body>
+|     <p>
+|       "foo"
+|       <mathml math>
+|         <mathml mtext>
+|           <i>
+|             "baz"
+|         <mathml annotation-xml>
+|           <svg svg>
+|             <svg desc>
+|               <b>
+|                 "eggs"
+|             <svg g>
+|               <svg foreignObject>
+|                 <p>
+|                   "spam"
+|                 <table>
+|                   <tbody>
+|                     <tr>
+|                       <td>
+|                         <img>
+|             <svg g>
+|               "quux"
+|       "bar"
+
+#data
+<!DOCTYPE html><body>foo<math><mtext><i>baz</i></mtext><annotation-xml><svg><desc><b>eggs</b></desc><g><foreignObject><P>spam<TABLE><tr><td><img></td></table></foreignObject></g><g>quux</g></svg></annotation-xml></math>bar
+#errors
+#document
+| <!DOCTYPE html>
+| <html>
+|   <head>
+|   <body>
+|     "foo"
+|     <mathml math>
+|       <mathml mtext>
+|         <i>
+|           "baz"
+|       <mathml annotation-xml>
+|         <svg svg>
+|           <svg desc>
+|             <b>
+|               "eggs"
+|           <svg g>
+|             <svg foreignObject>
+|               <p>
+|                 "spam"
+|               <table>
+|                 <tbody>
+|                   <tr>
+|                     <td>
+|                       <img>
+|           <svg g>
+|             "quux"
+|     "bar"
