@@ -19,10 +19,45 @@ Parsing
 
 Parsing functions is in the package HTML5-PARSER.
 
-^function^
-*parse-html5* source &key encoding strictp tree-builder
+~_f_~
+*parse-html5* _source &key encoding strictp tree-builder
+              => document, errors, tree-builder-instance_
 
 Parse a HTML document from source. Source can be a string, a pathname
 or a stream. When parsing from a stream encoding detection is not
 supported, encoding must be supplied via the encoding keyword
 parameter.
+
+When strictp is true, parsing stops on first error.
+
+tree-builder is a designator for a tree-builder class used to build
+the document.
+
+Returns tree values. The type of document depends on the tree-builder
+used. Errors is a list of errors found during parsing. The format of
+this list is subject to change. The last value is the
+tree-builder-instance used to build the document.
+
+
+~_f_~
+*parse-html5-fragment* _source &key container encoding strictp tree-builder
+                       => document, errors, tree-builder-instance_
+
+Parses a fragment of HTML. Container sets the context, defaults to "div".
+For det other parameters see +PARSE-HTML5+.
+
+
+Tree builders
+~~~~~~~~~~~~~
+
+Parsing HTML5 is not possible without a
+http://en.wikipedia.org/wiki/Document_Object_Model[DOM]. cl-html5-parser
+defines a minimal DOM interace via a set of generic function,
+including a simple default implementation. See treebuilder.lisp.
+
+All generic function takes a tree instance as the first
+parameter. This is an instance of the tree-builder class supplied to
++PARSE-HTML5+. When implementing your own tree builder you can
+dispatch on this parameter. Thus it's possible to use what ever
+representation you what for the document, without risk of interfering with
+other tree builders.
