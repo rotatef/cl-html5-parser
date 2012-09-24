@@ -9,7 +9,7 @@ cl-html5-parser is a HTML5 parser for Common Lisp with the following features:
 * It is a port of the Python library http://code.google.com/p/html5lib/[html5lib].
 * It passes all relevant tests from html5lib.
 * It is not tied to a specific DOM implementation.
-* It have only been testet in SBCL.
+* It has only been tested on SBCL.
 
 Usage
 -----
@@ -23,7 +23,7 @@ Parsing functions is in the package HTML5-PARSER.
 *parse-html5* _source &key encoding strictp tree-builder
               => document, errors, tree-builder-instance_
 
-Parse a HTML document from source. Source can be a string, a pathname
+Parse an HTML document from source. Source can be a string, a pathname
 or a stream. When parsing from a stream encoding detection is not
 supported, encoding must be supplied via the encoding keyword
 parameter.
@@ -38,7 +38,6 @@ used. Errors is a list of errors found during parsing. The format of
 this list is subject to change. The last value is the
 tree-builder-instance used to build the document.
 
-
 ~_f_~
 *parse-html5-fragment* _source &key container encoding strictp tree-builder
                        => document, errors, tree-builder-instance_
@@ -52,12 +51,26 @@ Tree builders
 
 Parsing HTML5 is not possible without a
 http://en.wikipedia.org/wiki/Document_Object_Model[DOM]. cl-html5-parser
-defines a minimal DOM interace via a set of generic function,
+defines a minimal DOM interface via a set of generic functions,
 including a simple default implementation. See treebuilder.lisp.
 
-All generic function takes a tree instance as the first
+All generic functions take a tree instance as the first
 parameter. This is an instance of the tree-builder class supplied to
 +PARSE-HTML5+. When implementing your own tree builder you can
 dispatch on this parameter. Thus it's possible to use what ever
-representation you what for the document, without risk of interfering with
+representation you want for the document, without risk of interfering with
 other tree builders.
+
+
+Other
+~~~~~
+
+~_f_~
+*html5-tree:tree-to-xmls* _tree node &optional include-namespace-p
+			  => list
+
+Converts a DOM tree into a simple
+http://common-lisp.net/project/xmls/[XMLS]-like list structure. This is a
+convenience function as this data model is too anemic to implement as a
+separate tree builder.  Tree and node are the tree-builder and document
+objects returned from PARSE-HTML5.
