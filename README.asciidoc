@@ -18,7 +18,7 @@ Usage
 Parsing
 ~~~~~~~
 
-Parsing functions is in the package HTML5-PARSER.
+Parsing functions are in the package HTML5-PARSER.
 
 ~_f_~
 *parse-html5* _source &key encoding strictp tree-builder
