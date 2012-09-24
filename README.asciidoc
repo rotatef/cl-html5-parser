@@ -9,8 +9,12 @@ cl-html5-parser is a HTML5 parser for Common Lisp with the following features:
 * It is a port of the Python library http://code.google.com/p/html5lib/[html5lib].
 * It passes all relevant tests from html5lib.
 * It is not tied to a specific DOM implementation.
+
+Requirements
+------------
+
 * It has only been tested on SBCL.
-* Requires CL-PPCRE and FLEXI-STREAMS.
+* CL-PPCRE and FLEXI-STREAMS.
 
 Usage
 -----
@@ -46,7 +50,6 @@ tree-builder-instance used to build the document.
 Parses a fragment of HTML. Container sets the context, defaults to "div".
 For det other parameters see +PARSE-HTML5+.
 
-
 Tree builders
 ~~~~~~~~~~~~~
 
@@ -62,7 +65,6 @@ dispatch on this parameter. Thus it's possible to use what ever
 representation you want for the document, without risk of interfering with
 other tree builders.
 
-
 Other
 ~~~~~
 
@@ -75,3 +77,9 @@ http://common-lisp.net/project/xmls/[XMLS]-like list structure. This is a
 convenience function as this data model is too anemic to implement as a
 separate tree builder.  Tree and node are the tree-builder and document
 objects returned from PARSE-HTML5.
+
+License
+-------
+
+This library is available under the
+http://www.gnu.org/licenses/lgpl.html[GNU Lesser General Public License v3.0].
