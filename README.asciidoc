@@ -67,7 +67,7 @@ Other
 
 ~_f_~
 *html5-tree:tree-to-xmls* _tree node &optional include-namespace-p
-			  => list
+			  => list_
 
 Converts a DOM tree into a simple
 http://common-lisp.net/project/xmls/[XMLS]-like list structure. This is a
