@@ -10,6 +10,7 @@ cl-html5-parser is a HTML5 parser for Common Lisp with the following features:
 * It passes all relevant tests from html5lib.
 * It is not tied to a specific DOM implementation.
 * It has only been tested on SBCL.
+* Requires CL-PPCRE and FLEXI-STREAMS.
 
 Usage
 -----
