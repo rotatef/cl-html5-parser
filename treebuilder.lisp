@@ -117,6 +117,13 @@ The function is called with one paramater, a child node."))
                           node)
        (assert root)
        (tree-to-xmls tree root include-namespace-p)))
+    (:fragment
+     (let (xmls-nodes)
+       (node-map-children tree (lambda (node)
+                                 (push (tree-to-xmls tree node include-namespace-p)
+                                       xmls-nodes))
+                          node)
+       (nreverse xmls-nodes)))
     (:element
      (let (attrs children)
        (node-map-attributes tree

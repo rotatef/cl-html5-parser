@@ -25,7 +25,7 @@ Parsing
 Parsing functions are in the package HTML5-PARSER.
 
 ~_f_~
-*parse-html5* _source &key encoding strictp tree-builder
+*parse-html5* _source &key encoding strictp tree-builder as-xmls
               => document, errors, tree-builder-instance_
 
 Parse an HTML document from source. Source can be a string, a pathname
@@ -36,7 +36,9 @@ parameter.
 When strictp is true, parsing stops on first error.
 
 tree-builder is a designator for a tree-builder class used to build
-the document.
+the document. If not provided at default tree builder will be used.
+
+When as-xmls is true the document will be returned as a XMLS-like list structure.
 
 Returns tree values. The type of document depends on the tree-builder
 used. Errors is a list of errors found during parsing. The format of
@@ -44,11 +46,21 @@ this list is subject to change. The last value is the
 tree-builder-instance used to build the document.
 
 ~_f_~
-*parse-html5-fragment* _source &key container encoding strictp tree-builder
+*parse-html5-fragment* _source &key container encoding strictp tree-builder as-xmls
                        => document, errors, tree-builder-instance_
 
-Parses a fragment of HTML. Container sets the context, defaults to "div".
-For det other parameters see +PARSE-HTML5+.
+Parses a fragment of HTML. Container sets the context, defaults to
+"div". If as-xmls is true the primary return value will be a list of
+XMLS nodes. For det other parameters see +PARSE-HTML5+.
+
+Example
+~~~~~~~
+-------------------------------------------------------------------------------------
+(html5-parser:parse-html5-fragment "Parse <i>some</i> HTML" :as-xmls t)
+("Parse " ("i" NIL "some") " HTML")
+NIL
+#<HTML5-SIMPLE-TREE:SIMPLE-TREE-BUILDER {10084F4193}>
+-------------------------------------------------------------------------------------
 
 Tree builders
 ~~~~~~~~~~~~~
@@ -77,6 +89,9 @@ http://common-lisp.net/project/xmls/[XMLS]-like list structure. This is a
 convenience function as this data model is too anemic to implement as a
 separate tree builder.  Tree and node are the tree-builder and document
 objects returned from PARSE-HTML5.
+
+If node is a document fragement a list of XMLS nodes a returned. In
+all other cases a single XMLS node is returned.
 
 License
 -------

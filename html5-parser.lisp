@@ -22,41 +22,47 @@
 
 ;; external interface
 
-(defun parse-html5 (source &key encoding strictp tree-builder)
+(defun parse-html5 (source &key encoding strictp tree-builder container as-xmls)
   (parse-html5-from-source source
                            :encoding encoding
                            :strictp strictp
-                           :tree-builder tree-builder))
-
-(defun parse-html5-fragment (source &key (container "div") encoding strictp tree-builder)
-  (parse-html5-from-source source
+                           :tree-builder tree-builder
                            :container container
+                           :as-xmls as-xmls))
+
+(defun parse-html5-fragment (source &key encoding strictp tree-builder (container "div") as-xmls)
+  (parse-html5-from-source source
                            :encoding encoding
                            :strictp strictp
-                           :tree-builder tree-builder))
+                           :tree-builder tree-builder
+                           :container container
+                           :as-xmls as-xmls))
 
 ;; internal
 
 (defun parse-html5-from-source (source &key container encoding strictp
-                                tree-builder)
+                                tree-builder as-xmls)
   (let ((*parser* (make-instance 'html-parser
-                                :tree-builder-class
-                                (find-class
-                                 (or tree-builder
-                                     *default-tree-builder*))
-                                :strict strictp)))
+                                 :tree-builder-class
+                                 (find-class
+                                  (or tree-builder
+                                      *default-tree-builder*))
+                                 :strict strictp)))
     (parser-parse source
                   :fragment-p container
                   :encoding encoding)
     (with-slots (open-elements errors) *parser*
-      (values
-       (if container
-           (let ((fragment (tree-make-fragment (tree))))
-             (node-reparent-children (first open-elements) fragment)
-             fragment)
-           (tree-document (tree)))
-       (reverse errors)
-       (tree)))))
+      (let ((document
+             (if container
+                 (let ((fragment (tree-make-fragment (tree))))
+                   (node-reparent-children (first open-elements) fragment)
+                   fragment)
+                 (tree-document (tree)))))
+        (values (if as-xmls
+                    (tree-to-xmls (tree) document)
+                    document)
+                (reverse errors)
+                (tree))))))
 
 (defvar *phase*)
 

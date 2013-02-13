@@ -179,7 +179,7 @@
     (element (1+ (apply #'+ (mapcar #'node-count (%node-child-nodes tree)))))
     ((or document document-fragment)
      (apply #'+ (mapcar #'node-count (%node-child-nodes tree))))
-    (t 0)))
+    (t 1)))
 
 (defmethod print-object ((node document) stream)
   (print-unreadable-object (node stream :type t :identity t)
