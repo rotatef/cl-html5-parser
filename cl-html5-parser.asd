@@ -46,3 +46,11 @@
                          (:file "test-tree-builder")
                          (:file "test-parser")
                          (:file "run-tests")))))
+
+(defsystem #:cl-html5-cxml
+  :name "cl-html5-cxml"
+  :licence "GNU Lesser General Public License"
+  :depends-on (:cl-html5-parser :cxml)
+  :serial t
+  :components ((:file "cxml/packages")
+               (:file "cxml/cxml-tree")))
