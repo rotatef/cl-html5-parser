@@ -282,6 +282,9 @@
     #\u000B
     ,@(char-range #\u000E #\u001F)
     ,@(char-range #\u007F #\u009F)
+    ;; The following are noncharacter as defined by Unicode.
+    ;; Clozure Common Lisp doesn't like them.
+    #-ccl ,@`(
     ,@(char-range #\uD800 #\uDFFF)
     ,@(char-range #\uFDD0 #\uFDEF)
     #\uFFFE
@@ -317,7 +320,7 @@
     #\u000FFFFE
     #\u000FFFFF
     #\u0010FFFE
-    #\u0010FFFF))
+    #\u0010FFFF)))
 
 (defparameter *invalid-unicode-hash* (make-hash-table))
 (dolist (char *invalid-unicode*)
