@@ -21,19 +21,35 @@
 (in-package :html5-parser)
 
 
-(defun group-entities (data)
-  (loop for current = (caaar data)
-     while current
-     with here
-     for sub = (loop while (eql (caaar data) current)
-		  for ((first . rest) . value) = (pop data)
-		  if rest
-		  collect (cons rest value)
-		  else do (setf here value))
-     collect (cons current
-		   (cons here
-			 (group-entities sub)))
-     do (setf here nil)))
+(defun convert-to-trie (char-list value)
+  (if (cdr char-list)
+      (list (car char-list)
+            nil
+            (convert-to-trie (rest char-list) value))
+      (list (car char-list)
+            value)))
+
+(defun insert-into-trie (char-list value trie)
+  (let ((sub-trie (assoc (car char-list) trie)))
+    (if sub-trie
+        (append (remove sub-trie trie)
+                (list (list* (car sub-trie)
+                             (cadr sub-trie)
+                             (insert-into-trie (rest char-list) value (cddr sub-trie)))))
+        (append trie
+                (list (convert-to-trie char-list value))))))
+
+(defun convert-entities-list (entities)
+  (loop for (name . values) in entities
+        collect (cons (coerce name 'list)
+                      (map 'string #'code-char values))))
+
+(defun make-entities-trie (entities)
+  (let (trie)
+    (dolist (entity (convert-entities-list entities))
+      (destructuring-bind (char-list . value) entity
+        (setf trie (insert-into-trie char-list value trie))))
+    trie))
 
 (defparameter *entities*
   '(("AElig" 198)
@@ -2268,7 +2284,4 @@
     ("zwj;" 8205)
     ("zwnj;" 8204)))
 
-(defparameter *entities-tree*
-  (group-entities (loop for (name . values) in *entities*
-                        collect (cons (coerce name 'list)
-                                      (map 'string #'code-char values)))))
+(defparameter *entities-tree* (make-entities-trie *entities*))
