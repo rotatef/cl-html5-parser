@@ -47,6 +47,11 @@
                          (:file "test-parser")
                          (:file "run-tests")))))
 
+(defmethod perform ((o test-op) (c (eql (find-system '#:cl-html5-parser))))
+  (operate 'load-op '#:cl-html5-parser-tests)
+  (funcall (find-symbol (string :run-html5-parser-tests)
+                        :html5-parser-tests)))
+
 (defsystem #:cl-html5-cxml
   :name "cl-html5-cxml"
   :licence "GNU Lesser General Public License"

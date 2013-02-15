@@ -20,9 +20,8 @@
 
 (in-package :html5-parser-tests)
 
-(defun common-lisp-user::run-html5-parser-tests ()
-  (input-stream-tests)
-  (test-tokenizer)
-  (tree-builder-tests)
-  (test-parser)
-  t)
+(defun run-html5-parser-tests ()
+  (values (input-stream-tests)
+          (test-tokenizer)
+          (tree-builder-tests)
+          (test-parser)))
