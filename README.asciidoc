@@ -68,8 +68,8 @@ Converting to XMLS
 ~~~~~~~~~~~~~~~~~~
 
 ~_f_~
-*html5-tree:node-to-xmls* _node &optional include-namespace-p
-			  => list_
+*html5-parser:node-to-xmls* _node &optional include-namespace-p
+                            => list_
 
 Converts a node into a simple
 http://common-lisp.net/project/xmls/[XMLS]-like list structure.
