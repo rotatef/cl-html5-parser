@@ -22,44 +22,44 @@
 
 ;; Printing for tests
 
-(defun print-node (tree node stream)
-  (ecase (node-type tree node)
+(defun print-node (node stream)
+  (ecase (node-type node)
     (:doctype
-     (format stream "<!DOCTYPE ~A" (node-name tree node))
-     (when (or (node-public-id tree node)
-               (node-system-id tree node))
+     (format stream "<!DOCTYPE ~A" (node-name node))
+     (when (or (node-public-id node)
+               (node-system-id node))
        (format stream " \"~A\" \"~A\""
-               (or (node-public-id tree node) "")
-               (or (node-system-id tree node) "")))
+               (or (node-public-id node) "")
+               (or (node-system-id node) "")))
      (format stream ">"))
     (:comment
-     (format stream "<!-- ~A -->" (node-value tree node)))
+     (format stream "<!-- ~A -->" (node-value node)))
     (:element
-     (if (and (node-namespace tree node)
-              (string/= (node-namespace tree node)
+     (if (and (node-namespace node)
+              (string/= (node-namespace node)
                         (html5-constants::find-namespace "html")))
          (format stream "<~A ~A>"
-                 (html5-constants::find-prefix (node-namespace tree node))
-                 (node-name tree node))
-         (format stream "<~A>" (node-name tree node))))
+                 (html5-constants::find-prefix (node-namespace node))
+                 (node-name node))
+         (format stream "<~A>" (node-name node))))
     (:text
-     (format stream "\"~A\"" (node-value tree node)))))
+     (format stream "\"~A\"" (node-value node)))))
 
-(defun print-tree (tree node &key (stream *standard-output*) (indent 0))
-  (ecase (node-type tree node)
+(defun print-tree (node &key (stream *standard-output*) (indent 0))
+  (ecase (node-type node)
     ((:document :fragment)
-     (node-map-children tree (lambda (child)
-                               (print-tree tree child
-                                           :stream stream
-                                           :indent (+ indent 2)))
-                        node))
+     (element-map-children (lambda (child)
+                             (print-tree child
+                                         :stream stream
+                                         :indent (+ indent 2)))
+                           node))
     (:element
      (format stream "~&|~vT" indent)
-     (print-node tree node stream)
+     (print-node node stream)
      (incf indent 2)
      (let ((attributes))
-       (node-map-attributes tree (lambda (name namespace value)
-                                   (push (cons (cons name namespace) value) attributes))
+       (element-map-attributes (lambda (name namespace value)
+                                 (push (cons (cons name namespace) value) attributes))
                             node)
        (when attributes
          (loop for (name . value) in (sort attributes #'string<
@@ -73,14 +73,14 @@
                    (format stream "~A ~A" (html5-constants:find-prefix (cdr name)) (car name))
                    (format stream "~A" (car name)))
                (format stream "=\"~A\"" value)))
-       (node-map-children tree (lambda (child)
-                                 (print-tree tree child
-                                             :stream stream
-                                             :indent indent))
+       (element-map-children (lambda (child)
+                               (print-tree child
+                                           :stream stream
+                                           :indent indent))
                           node)))
      ((:text :comment :doctype)
       (format stream "~&|~vT" indent)
-      (print-node tree node stream)))
+      (print-node node stream)))
   node)
 
 
@@ -96,12 +96,12 @@
     (when (member data *parser-tests-to-skip* :test #'string=)
       (format t " skipped")
       (return-from do-parser-test))
-    (multiple-value-bind (result-document got-errors tree)
+    (multiple-value-bind (result-document got-errors)
         (if document-fragment
             (parse-html5-fragment data :container document-fragment)
             (parse-html5 data))
       (let ((result (with-output-to-string (out)
-                      (print-tree tree result-document :stream out))))
+                      (print-tree result-document :stream out))))
         (unless (string= document result)
           (error "Input:~%~A~%Got:~%~A~%Expected:~%~A" data result document))
         (setf errors (split-sequence:split-sequence #\Newline errors
@@ -110,7 +110,7 @@
                    (/= (length errors) (length got-errors)))
           (warn "Errors mismatch~&Input:~%~A~%Got:~%~{~&~A~}~%Expected:~%~{~&~A~}"
                 data got-errors errors)))
-      tree)))
+      result-document)))
 
 
 (defun test-parser ()

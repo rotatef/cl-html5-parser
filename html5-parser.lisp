@@ -22,31 +22,22 @@
 
 ;; external interface
 
-(defun parse-html5 (source &key encoding strictp tree-builder container as-xmls)
+(defun parse-html5 (source &key encoding strictp container)
   (parse-html5-from-source source
                            :encoding encoding
                            :strictp strictp
-                           :tree-builder tree-builder
-                           :container container
-                           :as-xmls as-xmls))
+                           :container container))
 
-(defun parse-html5-fragment (source &key encoding strictp tree-builder (container "div") as-xmls)
+(defun parse-html5-fragment (source &key encoding strictp (container "div"))
   (parse-html5-from-source source
                            :encoding encoding
                            :strictp strictp
-                           :tree-builder tree-builder
-                           :container container
-                           :as-xmls as-xmls))
+                           :container container))
 
 ;; internal
 
-(defun parse-html5-from-source (source &key container encoding strictp
-                                tree-builder as-xmls)
+(defun parse-html5-from-source (source &key container encoding strictp)
   (let ((*parser* (make-instance 'html-parser
-                                 :tree-builder-class
-                                 (find-class
-                                  (or tree-builder
-                                      *default-tree-builder*))
                                  :strict strictp)))
     (parser-parse source
                   :fragment-p container
@@ -54,15 +45,12 @@
     (with-slots (open-elements errors) *parser*
       (let ((document
              (if container
-                 (let ((fragment (tree-make-fragment (tree))))
+                 (let ((fragment (make-fragment)))
                    (node-reparent-children (first open-elements) fragment)
                    fragment)
-                 (tree-document (tree)))))
-        (values (if as-xmls
-                    (tree-to-xmls (tree) document)
-                    document)
-                (reverse errors)
-                (tree))))))
+                 (document*))))
+        (values document
+                (reverse errors))))))
 
 (defvar *phase*)
 
@@ -80,11 +68,11 @@
 
 (defun cdata-switch-helper ()
   (and (last-open-element)
-       (not (equal (node-namespace* (last-open-element))
+       (not (equal (node-namespace (last-open-element))
                    (slot-value *parser* 'html-namespace)))))
 
 (defun parser-parse (source &key fragment-p encoding)
-  (with-slots (inner-html-mode container tokenizer tree)
+  (with-slots (inner-html-mode container tokenizer)
       *parser*
     (setf inner-html-mode fragment-p)
     (when (stringp fragment-p)
@@ -103,19 +91,18 @@
           do (parser-reset))))
 
 (defun parser-reset ()
-  (with-slots (tree open-elements active-formatting-elements
+  (with-slots (open-elements active-formatting-elements
                     head-pointer form-pointer insert-from-table
                     first-start-tag errors compat-mode inner-html-mode
                     inner-html container tokenizer phase last-phase
                     before-rcdata-phase frameset-ok
-                    html-namespace tree-builder-class)
+                    html-namespace)
       *parser*
     (setf open-elements '())
     (setf active-formatting-elements '())
     (setf head-pointer nil)
     (setf form-pointer nil)
     (setf insert-from-table nil)
-    (setf tree (make-instance tree-builder-class))
     (setf first-start-tag nil)
     (setf errors '())
     (setf compat-mode :no-quirks)
@@ -139,10 +126,10 @@
     (setf frameset-ok t)))
 
 (defun is-html-integration-point (element)
-  (if (and (string= (node-name* element) "annotation-xml")
-           (string= (node-namespace* element) (find-namespace "mathml")))
-      (and (node-attribute* element "encoding")
-           (member (ascii-upper-2-lower (node-attribute* element "encoding"))
+  (if (and (string= (node-name element) "annotation-xml")
+           (string= (node-namespace element) (find-namespace "mathml")))
+      (and (element-attribute element "encoding")
+           (member (ascii-upper-2-lower (element-attribute element "encoding"))
                    '("text/html" "application/xhtml+xml")
                    :test #'string=))
       (member (node-name-tuple element)
@@ -168,16 +155,14 @@
            (assert (not (member phase phases)))))))
 
 (defun process-token (token)
-  (with-slots (tokenizer tree last-open-element html-namespace)
+  (with-slots (tokenizer last-open-element html-namespace)
       *parser*
     (let ((new-token token)
           (type))
       (loop while new-token do
-            ;;(html5-parser-tests::print-tree (tree) (tree-document*))
-            ;;(print new-token)
            (let* ((current-node (last-open-element))
-                  (current-node-namespace (if current-node (node-namespace tree current-node)))
-                  (current-node-name (if current-node (node-name tree current-node))))
+                  (current-node-namespace (if current-node (node-namespace current-node)))
+                  (current-node-name (if current-node (node-name current-node))))
 
              (setf type (getf new-token :type))
 
@@ -330,7 +315,7 @@
                              ("xmlns:xlink" . ("xmlns" "xlink" ,(find-namespace "xmlns"))))))
 
 (defun reset-insertion-mode ()
-  (with-slots (tree inner-html html-namespace phase open-elements) *parser*
+  (with-slots (inner-html html-namespace phase open-elements) *parser*
     (let ((last nil)
           (new-phase nil)
           (new-modes '(("select" . :in-select)
@@ -348,7 +333,7 @@
                        ("frameset" . :in-frameset)
                        ("html" . :before-head))))
       (loop for node in (reverse open-elements)
-         for node-name = (node-name tree node)
+         for node-name = (node-name node)
          do
          (when (eql node (first open-elements))
            (assert inner-html)
@@ -360,7 +345,7 @@
            (assert inner-html))
 
          (unless (and (not last)
-                      (string/= (node-namespace tree node) html-namespace))
+                      (string/= (node-namespace node) html-namespace))
            (let ((match (cdr (assoc node-name new-modes :test #'string=))))
              (when match
                (setf new-phase match)
@@ -559,8 +544,8 @@
     ;; this token... If it's not, invoke self.parser.parseError().
     (let ((root-element (first open-elements)))
       (loop for (name . value) in (getf token :data)
-            do (unless (node-attribute* root-element name)
-                 (setf (node-attribute* root-element name) value))))
+            do (unless (element-attribute root-element name)
+                 (setf (element-attribute root-element name) value))))
     (setf first-start-tag nil)
     nil))
 
@@ -571,7 +556,7 @@
   nil)
 
 (def :initial process-comment ()
-  (insert-comment token (tree-document*))
+  (insert-comment token (document*))
   nil)
 
 (def :initial process-doctype (compat-mode phase)
@@ -660,7 +645,7 @@
     t)
 
   (def :before-html process-comment ()
-    (insert-comment token (tree-document*))
+    (insert-comment token (document*))
     nil)
 
   (def :before-html process-space-characters ()
@@ -709,7 +694,7 @@
 (def :before-head start-tag-html ()
   (process-start-tag token :phase :in-body))
 
-(def :before-head start-tag-head (tree head-pointer)
+(def :before-head start-tag-head (head-pointer)
   (insert-element token)
   (setf head-pointer (last-open-element))
   (setf (parser-phase *parser*) :in-head)
@@ -850,7 +835,7 @@
 
   (def :in-head end-tag-head (phase open-elements)
     (let ((node (pop-end open-elements)))
-      (assert (string= (node-name* node) "head") ()  "Expected head got ~S" (node-name* node))
+      (assert (string= (node-name node) "head") ()  "Expected head got ~S" (node-name node))
       (setf phase :after-head)
       nil))
 
@@ -917,7 +902,7 @@
     (push-end head-pointer open-elements)
     (process-start-tag token :phase :in-head)
     (loop for node in (reverse open-elements)
-          do (when (string= "head" (node-name* node))
+          do (when (string= "head" (node-name node))
                (setf open-elements
                      (remove node open-elements :test #'equal))
                (return)))
@@ -1010,8 +995,8 @@
   (default end-tag-other))
 
 (flet ((is-matching-formatting-element (node1 node2)
-         (and (equal (node-name* node1) (node-name* node2))
-              (equal (node-namespace* node1) (node-namespace* node2))
+         (and (equal (node-name node1) (node-name node2))
+              (equal (node-namespace node1) (node-namespace node2))
               (node-attributes= node1 node2))))
 
   (def :in-body add-formatting-element (reverse active-formatting-elements)
@@ -1036,7 +1021,7 @@
   (let ((allowed-elements '("dd" "dt" "li" "p" "tbody" "td"
                             "tfoot" "th" "thead" "tr" "body" "html")))
     (loop for node in (reverse open-elements)
-          do (when (not (member (node-name* node)
+          do (when (not (member (node-name node)
                                 allowed-elements
                                 :test #'string=))
                (parser-parse-error :expected-closing-tag-but-got-eof)
@@ -1068,7 +1053,7 @@
        (setf in-body-process-space-characters-mode :non-pre)
        (when (and (plusp (length data))
                   (char= #\Newline (char data 0))
-                  (member (node-name* (last-open-element))
+                  (member (node-name (last-open-element))
                           '("pre" "listing" "textarea")
                           :test #'string=)
                   (not (node-has-content (last-open-element))))
@@ -1085,28 +1070,28 @@
   (parser-parse-error :unexpected-start-tag
                       `(:name ,(getf token :name)))
   (if (or (= 1 (length open-elements))
-          (string/= (node-name* (second open-elements)) "body"))
+          (string/= (node-name (second open-elements)) "body"))
       (assert (slot-value *parser* 'inner-html))
       (progn
         (setf frameset-ok nil)
         (loop for (name . value) in (getf token :data)
-              do (unless (node-attribute* (second open-elements) name)
-                   (setf (node-attribute* (second open-elements) name) value)))))
+              do (unless (element-attribute (second open-elements) name)
+                   (setf (element-attribute (second open-elements) name) value)))))
   nil)
 
 (def :in-body start-tag-frameset (frameset-ok phase open-elements)
   (parser-parse-error :unexpected-start-tag
                       `(:name ,(getf token :name)))
   (cond ((or (= 1 (length open-elements))
-             (string/= (node-name* (second open-elements)) "body"))
+             (string/= (node-name (second open-elements)) "body"))
          (assert (slot-value *parser* 'inner-html)))
         ((not frameset-ok)
          nil)
         (t
-         (when (node-parent* (second open-elements))
-           (node-remove-child* (node-parent* (second open-elements))
+         (when (node-parent (second open-elements))
+           (node-remove-child (node-parent (second open-elements))
                               (second open-elements)))
-         (loop until (string= (node-name* (last-open-element))
+         (loop until (string= (node-name (last-open-element))
                               "html")
                do (pop-end open-elements))
          (insert-element token)
@@ -1147,12 +1132,12 @@
                           ((string= (getf token :name) "dd")
                            '("dt" "dd")))))
     (loop for node in (reverse open-elements)
-          do (cond ((member (node-name* node) stop-names :test #'string=)
-                    (process-end-tag (implied-tag-token (node-name* node)) :phase phase)
+          do (cond ((member (node-name node) stop-names :test #'string=)
+                    (process-end-tag (implied-tag-token (node-name node)) :phase phase)
                     (return))
                    ((and (member (node-name-tuple node) +special-elements+
                                  :test #'equal)
-                         (not (member (node-name* node)
+                         (not (member (node-name node)
                                       '("address" "div" "p")
                                       :test #'string=)))
                     (return)))))
@@ -1171,7 +1156,7 @@
 (def :in-body start-tag-heading (open-elements)
   (when (element-in-scope "p" "button")
     (end-tag-p (implied-tag-token "p")))
-  (when (member (node-name* (last-open-element)) +heading-elements+
+  (when (member (node-name (last-open-element)) +heading-elements+
                 :test #'string=)
     (perror :unexpected-start-tag :name (getf token :name))
     (pop-end open-elements))
@@ -1339,7 +1324,7 @@
   nil)
 
 (def :in-body start-tag-opt (phase)
-  (when (string= (node-name* (last-open-element)) "option")
+  (when (string= (node-name (last-open-element)) "option")
     (process-end-tag (implied-tag-token "option") :phase phase))
   (reconstruct-active-formatting-elements)
   (insert-element token)
@@ -1358,7 +1343,7 @@
 (def :in-body start-tag-rp-rt ()
   (when (element-in-scope "ruby")
     (generate-implied-end-tags)
-    (when (string/= (node-name* (last-open-element)) "ruby")
+    (when (string/= (node-name (last-open-element)) "ruby")
       (perror :expected-ruby-tag)))
   (insert-element token)
   nil)
@@ -1410,10 +1395,10 @@
          (end-tag-p (implied-tag-token "p")))
         (t
          (generate-implied-end-tags "p")
-         (when (string/= (node-name* (last-open-element)) "p")
+         (when (string/= (node-name (last-open-element)) "p")
            (perror :unexpected-end-tag :name "p"))
          (let ((node (pop-end open-elements)))
-           (loop until (string= (node-name* node) "p")
+           (loop until (string= (node-name node) "p")
                  do (setf node (pop-end open-elements))))))
   nil)
 
@@ -1422,16 +1407,16 @@
     (when (not (element-in-scope "body"))
       (perror :unexpected-scope)
       (return nil))
-    (when (string/= (node-name* (last-open-element)) "body")
+    (when (string/= (node-name (last-open-element)) "body")
       (loop for node in (cddr open-elements)
-            do (when (member (node-name* node)
+            do (when (member (node-name node)
                              '("dd" "dt" "li" "optgroup" "option" "p" "rp"
                                "rt" "tbody" "td" "tfoot" "th" "thead" "tr"
                                "body" "html")
                              :test #'string=)
                  ;;Not sure this is the correct name for the parse error
                  (perror :expected-one-end-tag-but-got-another
-                         :expected-name "body" :got-name (node-name* node))
+                         :expected-name "body" :got-name (node-name node))
                  (return)))))
   (setf (parser-phase *parser*) :after-body)
   nil)
@@ -1450,19 +1435,19 @@
   (let ((in-scope (element-in-scope (getf token :name))))
     (when in-scope
       (generate-implied-end-tags))
-    (when (string/= (node-name* (last-open-element))
+    (when (string/= (node-name (last-open-element))
                     (getf token :name))
       (perror :end-tag-too-early :name (getf token :name)))
     (when in-scope
       (let ((node (pop-end open-elements)))
-        (loop until (string= (node-name* node) (getf token :name))
+        (loop until (string= (node-name node) (getf token :name))
               do (setf node (pop-end open-elements))))))
   nil)
 
 (def :in-body end-tag-form (form-pointer open-elements)
   (let ((node form-pointer))
     (setf form-pointer nil)
-    (if (or (null node) (not (element-in-scope (node-name* node))))
+    (if (or (null node) (not (element-in-scope (node-name node))))
         (perror :unexpected-end-tag :name "form")
         (progn
           (generate-implied-end-tags)
@@ -1486,11 +1471,11 @@
         (perror :unexpected-end-tag :name (getf token :name))
         (progn
           (generate-implied-end-tags (getf token :name))
-          (when (string/= (node-name* (last-open-element))
+          (when (string/= (node-name (last-open-element))
                           (getf token :name))
             (perror :end-tag-too-early :name (getf token :name)))
           (let ((node (pop-end open-elements)))
-            (loop until (string= (node-name* node) (getf token :name))
+            (loop until (string= (node-name node) (getf token :name))
                   do (setf node (pop-end open-elements)))))))
   nil)
 
@@ -1499,13 +1484,13 @@
         do (when (element-in-scope item)
              (generate-implied-end-tags)
              (return)))
-  (when (string/= (node-name* (last-open-element))
+  (when (string/= (node-name (last-open-element))
                   (getf token :name))
     (perror :end-tag-too-early :name (getf token :name)))
   (loop for item in +heading-elements+
         do (when (element-in-scope item)
              (let ((item (pop-end open-elements)))
-               (loop until (member (node-name* item) +heading-elements+
+               (loop until (member (node-name item) +heading-elements+
                                    :test #'string=)
                      do (setf item (pop-end open-elements))))))
   nil)
@@ -1549,7 +1534,7 @@
                    (and (member formatting-element
                                 open-elements)
                         (not (element-in-scope
-                              (node-name* formatting-element)))))
+                              (node-name formatting-element)))))
                (perror :adoption-agency-1.1 :name name)
                (return-from outer nil))
 
@@ -1640,10 +1625,10 @@
 
                 ;; Step 6.6
                 ;; Remove lastNode from its parents, if any
-                (when (node-parent* last-node)
-                  (node-remove-child* (node-parent* last-node)
+                (when (node-parent last-node)
+                  (node-remove-child (node-parent last-node)
                                      last-node))
-                (node-append-child* node last-node)
+                (node-append-child node last-node)
 
                 ;; Step 7.7
                 (setf last-node node)
@@ -1654,11 +1639,11 @@
         ;; Foster parent lastNode if commonAncestor is a
         ;; table, tbody, tfoot, thead, or tr we need to
         ;; foster parent the lastNode
-        (when (node-parent* last-node)
-          (node-remove-child* (node-parent* last-node)
+        (when (node-parent last-node)
+          (node-remove-child (node-parent last-node)
                              last-node))
 
-        (if (member (node-name* common-ancestor)
+        (if (member (node-name common-ancestor)
                     '("table" "tbody" "tfoot" "thead" "tr")
                     :test #'string=)
             (multiple-value-bind (parent insert-before)
@@ -1694,12 +1679,12 @@
 (def :in-body end-tag-applet-marquee-object (open-elements)
   (when (element-in-scope (getf token :name))
     (generate-implied-end-tags))
-  (when (string/= (node-name* (last-open-element))
+  (when (string/= (node-name (last-open-element))
                   (getf token :name))
     (perror :end-tag-too-early :name (getf token :name)))
   (when (element-in-scope (getf token :name))
     (let ((element (pop-end open-elements)))
-      (loop until (string= (node-name* element) (getf token :name))
+      (loop until (string= (node-name element) (getf token :name))
             do (setf element (pop-end open-elements))))
     (clear-active-formatting-elements))
   nil)
@@ -1714,9 +1699,9 @@
 
 (def :in-body end-tag-other (open-elements)
   (loop for node in (reverse open-elements)
-        do (cond ((string= (node-name* node) (getf token :name))
+        do (cond ((string= (node-name node) (getf token :name))
                   (generate-implied-end-tags (getf token :name))
-                  (when (string/= (node-name* (last-open-element))
+                  (when (string/= (node-name (last-open-element))
                                   (getf token :name))
                     (perror :unexpected-end-tag :name (getf token :name)))
                   (loop while (not (eq node
@@ -1745,7 +1730,7 @@
 
 (def :text process-eof (phase original-phase open-elements)
   (perror :expected-named-closing-tag-but-got-eof
-          (node-name* (last-open-element)))
+          (node-name (last-open-element)))
   (pop-end open-elements)
   (setf phase original-phase)
   t)
@@ -1754,7 +1739,7 @@
   (error "Tried to process start tag ~S in RCDATA/RAWTEXT mode" (getf token :name)))
 
 (def :text end-tag-script (phase original-phase open-elements)
-  (assert (string= (node-name* (pop-end open-elements))
+  (assert (string= (node-name (pop-end open-elements))
                    "script"))
   (setf phase original-phase)
   ;; The rest of this method is all stuff that only happens if
@@ -1791,7 +1776,7 @@
 
 (flet ((clear-stack-to-table-context ()
          ;; clear the stack back to a table context
-         (loop until (member (node-name* (last-open-element))
+         (loop until (member (node-name (last-open-element))
                              '("table" "html")
                              :test #'string=)
             do
@@ -1802,7 +1787,7 @@
          ))
 
   (def :in-table process-eof (inner-html)
-    (if (string/= (node-name* (last-open-element)) "html")
+    (if (string/= (node-name (last-open-element)) "html")
         (perror :eof-in-table)
         (assert inner-html))
     ;; Stop parsing
@@ -1897,11 +1882,11 @@
   (def :in-table end-tag-table (inner-html open-elements)
     (cond ((element-in-scope "table" "table")
            (generate-implied-end-tags)
-           (unless (equal (node-name* (last-open-element)) "table")
+           (unless (equal (node-name (last-open-element)) "table")
              (perror :end-tag-too-early-named
                      :got-name "table"
-                     :expected-name (node-name* (last-open-element))))
-           (loop until (equal (node-name* (last-open-element)) "table")
+                     :expected-name (node-name (last-open-element))))
+           (loop until (equal (node-name (last-open-element)) "table")
               do (pop-end open-elements))
            (pop-end open-elements)
            (reset-insertion-mode))
@@ -2008,11 +1993,11 @@
     (cond ((not (ignore-end-tag-caption))
            ;; AT this code is quite similar to endTagTable in "InTable"
            (generate-implied-end-tags)
-           (unless (equal (node-name* (last-open-element)) "caption")
+           (unless (equal (node-name (last-open-element)) "caption")
              (perror :expected-one-end-tag-but-got-another
                      :got-name "caption"
-                     :expected-name (node-name* (last-open-element))))
-           (loop until (equal (node-name* (last-open-element)) "caption")
+                     :expected-name (node-name (last-open-element))))
+           (loop until (equal (node-name (last-open-element)) "caption")
               do (pop-end open-elements))
            (clear-active-formatting-elements)
            (setf phase :in-table))
@@ -2051,10 +2036,10 @@
 
 
 (flet ((ignore-end-tag-colgroup ()
-         (string= (node-name* (last-open-element)) "html")))
+         (string= (node-name (last-open-element)) "html")))
 
   (def :in-column-group process-eof (inner-html)
-    (cond ((string= (node-name* (last-open-element)) "html")
+    (cond ((string= (node-name (last-open-element)) "html")
            (assert inner-html)
            nil)
           (t
@@ -2113,14 +2098,14 @@
   (default end-tag-other))
 
 (flet ((clear-stack-to-table-body-context ()
-         (loop until (member (node-name* (last-open-element))
+         (loop until (member (node-name (last-open-element))
                              '("tbody" "tfoot" "thead" "html")
                              :test #'string=)
             do
               ;;(perror :unexpected-implied-end-tag-in-table
               ;;        :name (node-name (last-open-element)))
               (pop-end (slot-value *parser* 'open-elements)))
-         (when (string= (node-name* (last-open-element)) "html")
+         (when (string= (node-name (last-open-element)) "html")
            (assert (slot-value *parser* 'inner-html)))))
 
   (def :in-table-body process-eof ()
@@ -2150,7 +2135,7 @@
                (element-in-scope "tfoot" "table"))
            (clear-stack-to-table-body-context)
            (end-tag-table-row-group
-            (implied-tag-token (node-name* (last-open-element))))
+            (implied-tag-token (node-name (last-open-element))))
            token)
           (t
            ;; innerHTML case
@@ -2176,7 +2161,7 @@
                 (element-in-scope "tfoot" "table"))
            (clear-stack-to-table-body-context)
            (end-tag-table-row-group
-            (implied-tag-token (node-name* (last-open-element))))
+            (implied-tag-token (node-name (last-open-element))))
            token)
           (t
            ;; innerHTML case
@@ -2211,12 +2196,12 @@
 
 ;; helper methods (XXX unify this with other table helper methods)
 (flet ((clear-stack-to-table-row-context ()
-         (loop until (member (node-name* (last-open-element))
+         (loop until (member (node-name (last-open-element))
                              '("tr" "html")
                              :test #'string=)
             do
               (perror :unexpected-implied-end-tag-in-table-row
-                      :name (node-name* (last-open-element)))
+                      :name (node-name (last-open-element)))
               (pop-end (slot-value *parser* 'open-elements))))
 
        (ignore-end-tag-tr ()
@@ -2330,10 +2315,10 @@
   (def :in-cell end-tag-table-cell (phase open-elements)
     (cond ((element-in-scope (getf token :name) "table")
            (generate-implied-end-tags (getf token :name))
-           (cond ((not (equal (node-name* (last-open-element))
+           (cond ((not (equal (node-name (last-open-element))
                               (getf token :name)))
                   (perror :unexpected-cell-end-tag :name (getf token :name))
-                  (loop until (equal (node-name* (pop-end open-elements))
+                  (loop until (equal (node-name (pop-end open-elements))
                                      (getf token :name))))
                  (t
                   (pop-end open-elements)))
@@ -2379,7 +2364,7 @@
 
 ;; http://www.whatwg.org/specs/web-apps/current-work/#in-select
 (def :in-select process-eof (inner-html)
-  (if (not (equal (node-name* (last-open-element)) "html"))
+  (if (not (equal (node-name (last-open-element)) "html"))
       (perror :eof-in-select)
       (assert inner-html))
   nil)
@@ -2391,15 +2376,15 @@
 
 (def :in-select start-tag-option (open-elements)
   ;; We need to imply </option> if <option> is the current node.
-  (when (equal (node-name* (last-open-element)) "option")
+  (when (equal (node-name (last-open-element)) "option")
     (pop-end open-elements))
   (insert-element token)
   nil)
 
 (def :in-select start-tag-optgroup (open-elements)
-  (when (equal (node-name* (last-open-element)) "option")
+  (when (equal (node-name (last-open-element)) "option")
     (pop-end open-elements))
-  (when (equal (node-name* (last-open-element)) "optgroup")
+  (when (equal (node-name (last-open-element)) "optgroup")
     (pop-end open-elements))
   (insert-element token)
   nil)
@@ -2426,20 +2411,20 @@
   nil)
 
 (def :in-select end-tag-option (open-elements)
-  (if (equal (node-name* (last-open-element)) "option")
+  (if (equal (node-name (last-open-element)) "option")
       (pop-end open-elements)
       (perror :unexpected-end-tag-in-select :name (getf token :name)))
   nil)
 
 (def :in-select end-tag-optgroup (open-elements)
   ;; </optgroup> implicitly closes <option>
-  (when  (and (equal (node-name* (last-open-element)) "option")
-              (equal (node-name* (elt open-elements
+  (when  (and (equal (node-name (last-open-element)) "option")
+              (equal (node-name (elt open-elements
                                      (- (length open-elements) 2)))
                      "optgroup"))
     (pop-end open-elements))
   ;; It also closes </optgroup>
-  (if (equal (node-name* (last-open-element)) "optgroup")
+  (if (equal (node-name (last-open-element)) "optgroup")
       (pop-end open-elements)
       ;; But nothing else
       (perror :unexpected-end-tag-in-select :name (getf token :name)))
@@ -2447,7 +2432,7 @@
 
 (def :in-select end-tag-select (inner-html open-elements)
   (cond ((element-in-scope "select" "select")
-         (loop until (equal (node-name* (pop-end open-elements))
+         (loop until (equal (node-name (pop-end open-elements))
                             "select"))
          (reset-insertion-mode))
         (t
@@ -2587,18 +2572,18 @@
                                  (getf token :name))
              (loop until (or (is-html-integration-point (last-open-element))
                              (is-math-ml-text-integration-point (last-open-element))
-                             (equal (node-namespace* (last-open-element))
+                             (equal (node-namespace (last-open-element))
                                     html-namespace))
                    do (pop-end open-elements))
              (return token))
             (t
-             (cond ((equal (node-namespace* current-node) (find-namespace "mathml"))
+             (cond ((equal (node-namespace current-node) (find-namespace "mathml"))
                     (adjust-math-ml-attributes token))
-                   ((equal (node-namespace* current-node) (find-namespace "svg"))
+                   ((equal (node-namespace current-node) (find-namespace "svg"))
                     (adjust-svg-tag-names token)
                     (adjust-svg-attributes token)))
              (adjust-foreign-attributes token)
-             (setf (getf token :namespace) (node-namespace* current-node))
+             (setf (getf token :namespace) (node-namespace current-node))
              (insert-element token)
              (when (getf token :self-closing)
                (pop-end open-elements)
@@ -2609,11 +2594,11 @@
   (let ((new-token)
         (node-index (1- (length open-elements)))
         (node (last-open-element)))
-    (unless (string= (node-name* node) (getf token :name))
+    (unless (string= (node-name node) (getf token :name))
       (parser-parse-error :unexpected-end-tag (getf token :name)))
 
     (loop
-     (when (string= (ascii-upper-2-lower (node-name* node)) (getf token :name))
+     (when (string= (ascii-upper-2-lower (node-name node)) (getf token :name))
        ;; XXX this isn't in the spec but it seems necessary
        (when (eql phase :in-table-text)
          (flush-characters)
@@ -2625,7 +2610,7 @@
      (decf node-index)
 
      (setf node (elt open-elements node-index))
-     (when (equal (node-namespace* node)
+     (when (equal (node-namespace node)
                   html-namespace)
        (setf new-token (process-end-tag token :phase phase))
        (return)))
@@ -2692,7 +2677,7 @@
 
 
 (def :in-frameset process-eof (inner-html)
-  (if (string/= (node-name* (last-open-element)) "html")
+  (if (string/= (node-name (last-open-element)) "html")
       (parser-parse-error :eof-in-frameset)
       (assert inner-html))
   nil)
@@ -2719,13 +2704,13 @@
   nil)
 
 (def :in-frameset end-tag-frameset (phase inner-html open-elements)
-  (if (string= (node-name* (last-open-element)) "html")
+  (if (string= (node-name (last-open-element)) "html")
       ;; innerHTML case
       (parser-parse-error :unexpected-frameset-in-frameset-innerhtml)
       (pop-end open-elements))
 
   (when (and (not inner-html)
-             (string/= (node-name* (last-open-element)) "frameset"))
+             (string/= (node-name (last-open-element)) "frameset"))
     ;; If we're not in innerHTML mode and the the current node is not a
     ;; "frameset" element (anymore) then switch.
     (setf phase :after-frameset))
@@ -2783,7 +2768,7 @@
   nil)
 
 (def :after-after-body process-comment ()
-  (insert-comment token (tree-document*))
+  (insert-comment token (document*))
   nil)
 
 (def :after-after-body process-space-characters ()
@@ -2820,7 +2805,7 @@
   nil)
 
 (def :after-after-frameset process-comment ()
-  (insert-comment token (tree-document*))
+  (insert-comment token (document*))
   nil)
 
 (def :after-after-frameset process-space-characters ()

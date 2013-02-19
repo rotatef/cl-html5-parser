@@ -34,8 +34,6 @@
    (symbol-table :accessor symbol-table
                  :initform (make-hash-table :test #'equal))))
 
-(setf *default-tree-builder* 'qimt-tree-builder)
-
 (defmethod initialize-instance :after ((tree qimt-tree-builder) &key)
   (setf (slot-value tree 'document) (document)))
 

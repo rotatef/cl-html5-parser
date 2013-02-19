@@ -28,11 +28,11 @@
                (:file "entities")
                (:file "inputstream")
                (:file "tokenizer")
-               (:file "treebuilder")
+               (:file "simple-tree")
                (:file "html5-parser-class")
                (:file "tree-help")
                (:file "html5-parser")
-               (:file "simple-tree")))
+               (:file "xmls")))
 
 (defsystem #:cl-html5-parser-tests
   :depends-on (:cl-html5-parser :stefil :cl-json :split-sequence)

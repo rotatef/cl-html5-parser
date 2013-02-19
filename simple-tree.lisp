@@ -18,24 +18,16 @@
 ;;;;  You should have received a copy of the GNU General Public License
 ;;;;  along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-(in-package :html5-simple-tree)
+(in-package :html5-parser)
 
 ;; A basic implementation of a DOM-core like thing
 
-(defclass simple-tree-builder ()
-  ((document :reader tree-document)))
-
-(defvar *default-tree-builder* 'simple-tree-builder)
-
-(defmethod initialize-instance :after ((tree simple-tree-builder) &key)
-  (setf (slot-value tree 'document) (tree-make-document tree)))
-
 (defclass node ()
-  ((type :initform :node :allocation :class :reader %node-type)
-   (name :initarg :name :initform nil :reader %node-name)
-   (namespace :initarg :namespace :initform nil :reader %node-namespace)
-   (parent :initform nil :reader %node-parent)
-   (value :initform nil :initarg :value :reader %node-value)
+  ((type :initform :node :allocation :class :reader node-type)
+   (name :initarg :name :initform nil :reader node-name)
+   (namespace :initarg :namespace :initform nil :reader node-namespace)
+   (parent :initform nil :reader node-parent)
+   (value :initform nil :initarg :value :reader node-value)
    (child-nodes :initform nil :accessor %node-child-nodes)))
 
 (defclass document (node)
@@ -46,8 +38,8 @@
 
 (defclass document-type (node)
   ((type :initform :doctype :allocation :class)
-   (public-id :initarg :public-id :reader %node-public-id)
-   (system-id :initarg :system-id :reader %node-system-id)))
+   (public-id :initarg :public-id :reader node-public-id)
+   (system-id :initarg :system-id :reader node-system-id)))
 
 (defclass text-node (node)
   ((type :initform :text :allocation :class)))
@@ -63,88 +55,69 @@
 ;;; Creating nodes
 ;;;
 
-
-(defmethod tree-make-document ((tree simple-tree-builder))
+(defun make-document ()
   (make-instance 'document))
 
-(defmethod tree-make-fragment ((tree simple-tree-builder))
+(defun make-fragment ()
   (make-instance 'document-fragment))
 
-(defmethod tree-make-doctype ((tree simple-tree-builder) name public-id system-id)
+(defun make-doctype (name public-id system-id)
   (make-instance 'document-type :name name :public-id public-id :system-id system-id))
 
-(defmethod tree-make-comment ((tree simple-tree-builder) data)
+(defun make-comment (data)
   (make-instance 'comment-node :value data))
 
-(defmethod tree-make-element ((tree simple-tree-builder) name namespace)
+(defun make-element (name namespace)
   (make-instance 'element :name name :namespace namespace))
 
-(defmethod tree-make-text-node ((tree simple-tree-builder) data)
+(defun make-text-node (data)
   (make-instance 'text-node :value data))
 
 ;;;
 ;;; Node methods
 ;;;
 
-(defmethod node-name ((tree simple-tree-builder) (node node))
-  (%node-name node))
-
-(defmethod node-namespace ((tree simple-tree-builder) (node node))
-  (%node-namespace node))
-
-(defmethod node-value ((tree simple-tree-builder) (node node))
-  (%node-value node))
-
-(defmethod node-public-id ((tree simple-tree-builder) (node node))
-  (%node-public-id node))
-
-(defmethod node-system-id ((tree simple-tree-builder) (node node))
-  (%node-system-id node))
-
-(defmethod node-parent ((tree simple-tree-builder) (node node))
-  (%node-parent node))
-
-(defmethod node-first-child ((tree simple-tree-builder) (node node))
+(defun node-first-child (node)
   (car (%node-child-nodes node)))
 
-(defmethod node-last-child ((tree simple-tree-builder) (node node))
+(defun node-last-child (node)
   (car (last (%node-child-nodes node))))
 
-(defmethod node-previous-sibling ((tree simple-tree-builder) (node node))
-  (loop for (this next) on (%node-child-nodes (%node-parent node))
+(defun node-previous-sibling (node)
+  (loop for (this next) on (%node-child-nodes (node-parent node))
         when (eql next node) do (return this)))
 
-(defmethod node-next-sibling ((tree simple-tree-builder) (node node))
-  (loop for (this next) on (%node-child-nodes (%node-parent node))
+(defun node-next-sibling (node)
+  (loop for (this next) on (%node-child-nodes (node-parent node))
         when (eql this node) do (return next)))
 
-(defmethod node-append-child ((tree simple-tree-builder) (node node) child)
-  (when (%node-parent child)
-    (node-remove-child tree (%node-parent child) child))
+(defun node-append-child (node child)
+  (when (node-parent child)
+    (node-remove-child (node-parent child) child))
   (setf (slot-value child 'parent) node)
   (setf (%node-child-nodes node)
         (append (%node-child-nodes node) (list child))))
 
-(defmethod node-remove-child ((tree simple-tree-builder) (node node) child)
+(defun node-remove-child (node child)
   (setf (%node-child-nodes node)
         (remove child (%node-child-nodes node)))
   (setf (slot-value child 'parent) nil))
 
-(defmethod node-insert-before ((tree simple-tree-builder) (node node) child insert-before)
+(defun node-insert-before (node child insert-before)
   (let ((child-nodes (%node-child-nodes node)))
     (setf (slot-value child 'parent) node)
     (setf (%node-child-nodes node) ())
     (dolist (kid child-nodes)
       (when (eql kid insert-before)
-        (node-append-child tree node child))
-      (node-append-child tree node kid))))
+        (node-append-child node child))
+      (node-append-child node kid))))
 
-(defmethod node-attribute ((tree simple-tree-builder) (node element) attribute &optional namespace)
+(defun element-attribute (node attribute &optional namespace)
   (cdr (assoc (cons attribute namespace)
               (%node-attributes node)
               :test #'equal)))
 
-(defmethod (setf node-attribute) (new-value (tree simple-tree-builder) (node node) attribute
+(defun (setf element-attribute) (new-value node attribute
                                   &optional namespace)
   (check-type attribute string)
   (check-type new-value string)
@@ -159,13 +132,10 @@
 ;;; Traversing
 ;;;
 
-(defmethod node-type ((tree simple-tree-builder) (node node))
-  (%node-type node))
-
-(defmethod node-map-children ((tree simple-tree-builder) function (node node))
+(defun element-map-children (function node)
   (map nil function (%node-child-nodes node)))
 
-(defmethod node-map-attributes ((tree simple-tree-builder) function (node element))
+(defun element-map-attributes (function node)
   (loop for ((name . namespace) . value) in (%node-attributes node)
         do (funcall function name namespace value)))
 

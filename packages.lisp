@@ -51,20 +51,24 @@
    #:+replacement-characters+
    #:+heading-elements+))
 
-
-(defpackage :html5-tree
+(defpackage :html5-parser
   (:use
-   :common-lisp)
+   :common-lisp
+   :html5-constants
+   :cl-ppcre)
   (:export
-   #:*default-tree-builder*
+   #:parse-html5
+   #:parse-html5-fragment
 
-   #:tree-document
-   #:tree-make-document
-   #:tree-make-fragment
-   #:tree-make-doctype
-   #:tree-make-comment
-   #:tree-make-element
-   #:tree-make-text-node
+   #:node-to-xmls
+
+   ;; A simple DOM
+   #:make-document
+   #:make-fragment
+   #:make-doctype
+   #:make-comment
+   #:make-element
+   #:make-text-node
 
    #:node-type
    #:node-name
@@ -72,7 +76,7 @@
    #:node-value
    #:node-public-id
    #:node-system-id
-   #:node-attribute
+   #:element-attribute
 
    #:node-append-child
    #:node-insert-before
@@ -83,24 +87,5 @@
    #:node-last-child
    #:node-previous-sibling
    #:node-next-sibling
-   #:node-map-attributes
-   #:node-map-children
-
-   #:tree-to-xmls))
-
-(defpackage :html5-simple-tree
-  (:use
-   :common-lisp
-   :html5-tree)
-  (:export
-   #:simple-tree-builder))
-
-(defpackage :html5-parser
-  (:use
-   :common-lisp
-   :html5-constants
-   :html5-tree
-   :cl-ppcre)
-  (:export
-   #:parse-html5
-   #:parse-html5-fragment))
+   #:element-map-attributes
+   #:element-map-children))

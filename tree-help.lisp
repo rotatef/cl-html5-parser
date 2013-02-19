@@ -36,109 +36,84 @@
 
 (defvar *parser*)
 
-(defun tree ()
-  (parser-tree *parser*))
-
-(defun tree-document* ()
-  (tree-document (tree)))
+(defun document* ()
+  (slot-value *parser* 'document))
 
 (defun node-clone* (node)
-  (ecase (node-type (tree) node)
+  (ecase (node-type node)
     (:document
-      (tree-make-document (tree)))
+      (make-document))
     (:fragment
-     (tree-make-fragment (tree)))
+     (make-fragment))
     (:doctype
-     (tree-make-doctype (tree)
-                        (node-name* node)
-                        (node-public-id (tree) node)
-                        (node-system-id (tree) node)))
+     (make-doctype (node-name node)
+                   (node-public-id node)
+                   (node-system-id node)))
     (:comment
-      (tree-make-comment (tree) (node-value (tree) node)))
+      (make-comment (node-value node)))
     (:text
-     (tree-make-text-node (tree) (node-value (tree) node)))
+     (make-text-node (node-value node)))
     (:element
-     (let ((clone (tree-make-element (tree) (node-name* node) (node-namespace* node))))
-       (node-map-attributes
-        (tree)
+     (let ((clone (make-element (node-name node) (node-namespace node))))
+       (element-map-attributes
         (lambda (name namespace value)
-          (setf (node-attribute* clone name namespace) value))
+          (setf (element-attribute clone name namespace) value))
         node)
        clone))))
 
 (defun node-name-tuple (node)
-  (cons (or (node-namespace (tree) node)
+  (cons (or (node-namespace node)
             (find-namespace "html"))
-        (node-name (tree) node)))
-
-(defun node-name* (node)
-  (node-name (tree) node))
-
-(defun node-namespace* (node)
-  (node-namespace (tree) node))
-
-(defun node-attribute* (node attribute &optional namespace)
-  (node-attribute (tree) node attribute namespace))
-
-(defun (setf node-attribute*) (new-value node attribute &optional namespace)
-  (setf (node-attribute (tree) node attribute namespace) new-value))
-
-(defun node-parent* (node)
-  (node-parent (tree) node))
+        (node-name node)))
 
 (defun node-has-content (node)
-  (not (null (node-first-child (tree) node))))
+  (not (null (node-first-child node))))
 
 (defun node-attributes= (node1 node2)
   (labels ((has-all-attributes-of (node1 node2)
-             (node-map-attributes
-              (tree) (lambda (name namespace value)
-                       (unless (equal value
-                                      (node-attribute (tree) node2 name namespace))
-                         (return-from has-all-attributes-of nil)))
+             (element-map-attributes
+              (lambda (name namespace value)
+                (unless (equal value
+                               (element-attribute node2 name namespace))
+                  (return-from has-all-attributes-of nil)))
               node1)
              t))
     (and (has-all-attributes-of node1 node2)
          (has-all-attributes-of node2 node1))))
 
-(defun node-remove-child* (node child)
-  (node-remove-child (tree) node child))
-
 (defun node-append-child* (node child)
-  (let ((last-child (node-last-child (tree) node)))
-    (when (and (eql :text (node-type (tree) child))
+  (let ((last-child (node-last-child node)))
+    (when (and (eql :text (node-type child))
                last-child
-               (eql :text (node-type (tree) last-child)))
-      (node-remove-child (tree) node last-child)
-      (setf child (tree-make-text-node
-                   (tree)
+               (eql :text (node-type last-child)))
+      (node-remove-child node last-child)
+      (setf child (make-text-node
                    (concatenate 'string
-                                (node-value (tree) last-child)
-                                (node-value (tree) child))))))
-  (node-append-child (tree) node child))
+                                (node-value last-child)
+                                (node-value child))))))
+  (node-append-child node child))
 
 (defun node-insert-before* (node child insert-before)
-  (when (eql :text (node-type (tree) child))
-    (let ((prev-child (node-previous-sibling (tree) insert-before)))
+  (when (eql :text (node-type child))
+    (let ((prev-child (node-previous-sibling insert-before)))
       (when (and prev-child
-                 (eql :text (node-type (tree) prev-child)))
-        (node-remove-child (tree) node prev-child)
-        (setf child (tree-make-text-node
-                     (tree)
+                 (eql :text (node-type prev-child)))
+        (node-remove-child node prev-child)
+        (setf child (make-text-node
                      (concatenate 'string
-                                  (node-value (tree) prev-child)
-                                  (node-value (tree) child)))))))
-  (node-insert-before (tree) node child insert-before))
+                                  (node-value prev-child)
+                                  (node-value child)))))))
+  (node-insert-before node child insert-before))
 
 (defun node-reparent-children (node new-parent)
-  (node-map-children (tree) (lambda (child)
-                              (node-append-child* new-parent child))
-                     node))
+  (element-map-children (lambda (child)
+                          (node-append-child new-parent child))
+                        node))
 
 (defun node-insert-text (node data &optional insert-before)
   (if insert-before
-      (node-insert-before* node (tree-make-text-node (tree) data) insert-before)
-      (node-append-child* node (tree-make-text-node (tree) data))))
+      (node-insert-before* node (make-text-node data) insert-before)
+      (node-append-child* node (make-text-node data))))
 
 (defun last-open-element ()
   (with-slots (open-elements) *parser*
@@ -147,14 +122,13 @@
 (defun create-element (token)
   "Create an element but don't insert it anywhere"
   (with-slots (html-namespace) *parser*
-    (let ((element (tree-make-element (tree)
-                                      (getf token :name)
-                                      (or (getf token :namespace)
-                                          html-namespace))))
+    (let ((element (make-element (getf token :name)
+                                 (or (getf token :namespace)
+                                     html-namespace))))
       (loop for (name . value) in (getf token :data)
             do (if (consp name)
-                   (setf (node-attribute* element (second name) (third name)) value)
-                   (setf (node-attribute* element name) value)))
+                   (setf (element-attribute element (second name) (third name)) value)
+                   (setf (element-attribute element name) value)))
       element)))
 
 
@@ -163,32 +137,30 @@
     (let ((element (create-element token)))
       (assert element)
       (push-end element open-elements)
-      (node-append-child* (tree-document (tree)) element))))
+      (node-append-child (document*) element))))
 
 (defun insert-doctype (token)
-  (node-append-child*
-   (tree-document (tree))
-   (tree-make-doctype (tree)
-                      (getf token :name)
-                      (getf token :public-id)
-                      (getf token :system-id))))
+  (node-append-child (document*)
+                     (make-doctype (getf token :name)
+                                   (getf token :public-id)
+                                   (getf token :system-id))))
 
 (defun insert-comment (token &optional parent)
   (with-slots (open-elements) *parser*
     (unless parent
       (setf parent (car (last open-elements))))
-    (node-append-child* parent (tree-make-comment (tree) (getf token :data)))))
+    (node-append-child parent (make-comment (getf token :data)))))
 
 (defun insert-element-normal (token)
   (with-slots (open-elements) *parser*
    (let ((element (create-element token)))
-     (node-append-child* (last-open-element) element)
+     (node-append-child (last-open-element) element)
      (push-end element open-elements)
      element)))
 
 (defun insert-element-table (token)
   (with-slots (open-elements) *parser*
-    (if (not (member (node-name* (last-open-element))
+    (if (not (member (node-name (last-open-element))
                      +table-insert-mode-elements+ :test #'string=))
         (insert-element-normal token)
         (let ((element (create-element token)))
@@ -215,7 +187,7 @@
       (setf parent (car (last open-elements))))
     (cond ((or (not insert-from-table)
                (and insert-from-table
-                    (not (member (node-name* (last-open-element))
+                    (not (member (node-name (last-open-element))
                                  +table-insert-mode-elements+ :test #'string=))))
            (node-insert-text parent data))
           (t
@@ -231,15 +203,15 @@
   (with-slots (open-elements) *parser*
     ;; The foster parent element is the one which comes before the most
     ;; recently opened table element
-    (let ((last-table (find "table" open-elements :key #'node-name* :test #'string= :from-end t))
+    (let ((last-table (find "table" open-elements :key #'node-name :test #'string= :from-end t))
           (foster-parent nil)
           (insert-before nil))
 
       (cond (last-table
               ;; XXX - we should really check that this parent is actually a
               ;; node here
-              (if (node-parent* last-table)
-                  (setf foster-parent (node-parent* last-table)
+              (if (node-parent last-table)
+                  (setf foster-parent (node-parent last-table)
                         insert-before last-table)
                   (setf foster-parent (elt open-elements (1- (position last-table open-elements))))))
              (t
@@ -248,7 +220,7 @@
 
 (defun generate-implied-end-tags (&optional exclude)
   (with-slots (open-elements) *parser*
-    (let ((name (node-name* (last-open-element))))
+    (let ((name (node-name (last-open-element))))
       ;; XXX td, th and tr are not actually needed
       (when (and (member name '("dd" "dt" "li" "option" "optgroup" "p" "rp" "rt") :test #'string=)
                  (not (equal name exclude)))
@@ -294,11 +266,11 @@
 
          ;; Step 9
          (let* ((element (insert-element (list :type :start-tag
-                                               :name (node-name* entry)
-                                               :namespace (node-namespace* entry)))))
-           (node-map-attributes (tree) (lambda (name namespace value)
-                                         (setf (node-attribute (tree) element name namespace) value))
-                                entry)
+                                               :name (node-name entry)
+                                               :namespace (node-namespace entry)))))
+           (element-map-attributes (lambda (name namespace value)
+                                     (setf (element-attribute element name namespace) value))
+                                   entry)
 
            ;; Step 10
            (setf (elt active-formatting-elements i) element)
@@ -323,7 +295,7 @@
        ;; name attribute.
          (when (eql item :marker)
            (return nil))
-         (when (string= (node-name* item) name)
+         (when (string= (node-name item) name)
            (return item)))))
 
 (defun element-in-scope (target &optional variant)
@@ -343,7 +315,7 @@
         (invert (equal "select" variant)))
     (dolist (node (reverse (slot-value *parser* 'open-elements)))
       (when (or (and (stringp target)
-                     (string= (node-name* node) target))
+                     (string= (node-name node) target))
                 (eql node target))
         (return-from element-in-scope t))
 

@@ -25,11 +25,10 @@
 (defclass html-parser ()
   ((html-namespace :initform (find-namespace "html"))
    (strict :initarg :strict)
-   (tree-builder-class :initarg :tree-builder-class)
    (inner-html-mode)
    (container :initform "div")
    (tokenizer)
-   (tree :initarg :tree :reader parser-tree)
+   (document :initform (make-instance 'document))
    (errors :initform '())
    (phase :accessor parser-phase)
    first-start-tag
