@@ -169,7 +169,7 @@
     ;; 4. Not impleneted
 
     ;; 5. Restart paring from scratch
-    (setf encoding (cons (car encoding) :certain))
+    (setf encoding (cons new-encoding :certain))
     (open-char-stream stream)
     (throw 'please-reparse t)))
 
