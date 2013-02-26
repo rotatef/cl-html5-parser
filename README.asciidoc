@@ -16,7 +16,7 @@ Requirements
 * SBCL or ECL.
 * CL-PPCRE and FLEXI-STREAMS.
 
-Might work with CLISP and Clozure CL, but many of the tests doesn't pass there.
+Might work with CLISP, ABCL and Clozure CL, but many of the tests don't pass there.
 
 Usage
 -----
