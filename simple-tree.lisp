@@ -157,8 +157,8 @@
 
 (defmethod print-object ((node node) stream)
   (print-unreadable-object (node stream :type t :identity t)
-    (format stream "~A" (%node-name node))))
+    (format stream "~A" (node-name node))))
 
 (defmethod print-object ((node text-node) stream)
   (print-unreadable-object (node stream :type t :identity t)
-    (write (%node-value node) :stream stream :length 30)))
+    (write (node-value node) :stream stream :length 30)))
