@@ -978,7 +978,7 @@
 (tagname-dispatch :in-body process-end-tag
   ("body" end-tag-body)
   ("html" end-tag-html)
-  (("address" "article" "aside" "blockquote" "center"
+  (("address" "article" "aside" "blockquote" "button" "center"
               "details" "dir" "div" "dl" "fieldset" "figcaption" "figure"
               "footer" "header" "hgroup" "listing" "menu" "nav" "ol" "pre"
               "section" "summary" "ul")
