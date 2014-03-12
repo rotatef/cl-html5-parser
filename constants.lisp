@@ -153,7 +153,7 @@
     (,(find-namespace "svg") . "foreignObject")))
 
 (defparameter +html-integration-point-elements+
-  `((,(find-namespace "mathml") . "annotaion-xml")
+  `((,(find-namespace "mathml") . "annotation-xml")
     (,(find-namespace "svg") . "foreignObject")
     (,(find-namespace "svg") . "desc")
     (,(find-namespace "svg") . "title")))
@@ -261,7 +261,7 @@
     "noscript"))
 
 (defparameter +html-integration-point-elements+
-  `((,(find-namespace "mathml") . "annotaion-xml")
+  `((,(find-namespace "mathml") . "annotation-xml")
     (,(find-namespace "svg") . "foreignObject")
     (,(find-namespace "svg") . "desc")
     (,(find-namespace "svg") . "title")))
