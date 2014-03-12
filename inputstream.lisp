@@ -129,7 +129,7 @@
         (vector
          (when (> (length source) 0) (setf byte-0 (aref source 0)))
          (when (> (length source) 1) (setf byte-1 (aref source 1)))
-         (when (> (length source) 2) (setf byte-0 (aref source 2))))
+         (when (> (length source) 2) (setf byte-2 (aref source 2))))
         (pathname
          (with-open-file (in source :element-type '(unsigned-byte 8))
            (setf byte-0 (read-byte in nil))
