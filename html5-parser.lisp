@@ -756,7 +756,7 @@
 
   (defun parse-content-attr (string)
     "The algorithm for extracting an encoding from a meta element"
-    (let ((position 0)) ; Step 1
+    (let ((position 0))                 ; Step 1
       (labels ((char-at (index)
                  (and (< position (length string))
                       (char string index)))
@@ -765,17 +765,17 @@
                        do (incf position))))
         ;; Step 2
         (loop
-         (setf position (search "charset" string :start2 position))
-         (unless position
-           (return-from parse-content-attr))
-         ;; Set position to after charset
-         (incf position 7)
-         ;; Step 3
-         (skip-space)
-         ;; Step 4
-         (when (eql (char-at position) #\=)
-           (return))
-         (decf position))
+          (setf position (search "charset" string :start2 position))
+          (unless position
+            (return-from parse-content-attr))
+          ;; Set position to after charset
+          (incf position 7)
+          ;; Step 3
+          (skip-space)
+          ;; Step 4
+          (when (eql (char-at position) #\=)
+            (return))
+          (decf position))
         ;; Step 5
         (incf position)
         (skip-space)
@@ -809,9 +809,13 @@
                     (ascii-istring= (cdr (assoc "http-equiv" attributes :test #'string=))
                                     "Content-Type")
                     (assoc "content" attributes :test #'string=))
-               (html5-stream-change-encoding (tokenizer-stream tokenizer)
-                                             (parse-content-attr
-                                              (cdr (assoc "content" attributes :test #'string=))))))))
+               (let* ((content (cdr (assoc "content" attributes :test #'string=)))
+                      (new-encoding (parse-content-attr content)))
+                 (if new-encoding
+                     (html5-stream-change-encoding (tokenizer-stream tokenizer)
+                                                   new-encoding)
+                     (parser-parse-error :invalid-encoding-declaration
+                                         `(:content ,content))))))))
     nil)
 
   (def :in-head start-tag-title ()
