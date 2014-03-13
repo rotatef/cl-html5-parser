@@ -940,7 +940,7 @@
   ("body" start-tag-body)
   ("frameset" start-tag-frameset)
   (("address" "article" "aside" "blockquote" "center" "details"
-              "details" "dir" "div" "dl" "fieldset" "figcaption" "figure"
+              "dir" "div" "dl" "fieldset" "figcaption" "figure"
               "footer" "header" "hgroup" "menu" "nav" "ol" "p"
               "section" "summary" "ul")
    start-tag-close-p)
@@ -967,7 +967,7 @@
   ("isindex" start-tag-is-index)
   ("textarea" start-tag-textarea)
   ("iframe" start-tag-i-frame)
-  (("noembed" "noframes" "noscript") start-tag-rawtext)
+  (("noembed" "noscript") start-tag-rawtext)
   ("select" start-tag-select)
   (("rp" "rt") start-tag-rp-rt)
   (("option" "optgroup") start-tag-opt)
