@@ -205,12 +205,12 @@
             ;; up to the part that didn't match
             (when (and end
                        (/= chunk-offset (length chunk)))
-              (princ (subseq chunk chunk-offset end) data)
+              (write-string chunk data :start chunk-offset :end end)
               (setf chunk-offset end)
               (return))
             ;; If the whole remainder of the chunk matched,
             ;; use it all and read the next chunk
-            (princ (subseq chunk chunk-offset) data)
+            (write-string chunk data :start chunk-offset)
             (unless (read-chunk stream)
               (return))))))
 
