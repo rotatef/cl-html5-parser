@@ -399,7 +399,7 @@
           for method-name = (phase-process-method-name function-name)
           collect `(defgeneric ,method-name (phase token))
           collect `(defun ,function-name (token &key (phase *phase*))
-                     (call-phase-method ',method-name phase token)))))
+                     (call-phase-method #',method-name phase token)))))
 
 (define-phase-process-functions
   add-formatting-element
@@ -503,16 +503,23 @@
   `(def ,phase ,name ()
      (let ((tagname (getf token :name)))
        (declare (ignorable tagname))
-       (cond ,@(loop for (tagnames function) in cases
-                  collect `(,(cond ((stringp tagnames)
-                                    `(string= tagname ,tagnames))
-                                   ((consp tagnames)
-                                    `(member tagname ',tagnames :test #'string=))
-                                   ((eql 'default tagnames)
-                                    t)
-                                   (t (error "Invalid tag name clause ~S" tagnames)))
-                             (,function token)))
-             (t (error "Unhandled tag ~S" tagname))))))
+       ,(let* ((default '(error "Unhandled tag ~S" tagname))
+               (string-cases
+                 (loop for (tagnames function) in cases
+                       append (cond ((stringp tagnames)
+                                     `((,tagnames (,function token))))
+                                    ((consp tagnames)
+                                     (loop for tag in tagnames
+                                           collect `(,tag (,function token))))
+                                    ((eql 'default tagnames)
+                                     (setf default `(,function token))
+                                     nil)
+                                    (t (error "Invalid tag name clause ~S" tagnames))))))
+          (if (not string-cases)
+              default
+              `(string-case:string-case
+                   (tagname :default ,default)
+                 ,@string-cases))))))
 
 ;; Default methods
 
