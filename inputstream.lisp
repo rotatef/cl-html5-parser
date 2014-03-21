@@ -20,6 +20,16 @@
 
 (in-package :html5-parser)
 
+(deftype array-length ()
+  "Type of an array index."
+  '(integer 0 #.array-dimension-limit))
+
+(deftype chunk ()
+  "Type of the input stream buffer."
+  '#.(type-of (make-array (* 10 1024)
+                          :element-type 'character
+                          :fill-pointer 0)))
+
 (defparameter *default-encoding* :utf-8)
 
 (defclass html-input-stream ()
@@ -194,6 +204,7 @@
    including any character in characters or end of file.
    "
   (with-slots (chunk chunk-offset) stream
+    (declare (array-length chunk-offset) (chunk chunk))
     (with-output-to-string (data)
       (loop for end = (our-scan characters opposite-p chunk :start chunk-offset) do
             ;; If nothing matched, and it wasn't because we ran out of chunk,
@@ -233,7 +244,10 @@
              (assert (char= char (char chunk chunk-offset))))))))
 
 (defun read-chunk (stream)
+  (declare (optimize speed))
   (with-slots (char-stream chunk chunk-offset pending-cr) stream
+    (declare (array-length chunk-offset)
+             (chunk chunk))
     (setf chunk-offset 0)
     (let ((start 0))
       (when pending-cr
@@ -260,8 +274,8 @@
         ;; Normalize line endings (CR LF)
         (loop for previous = nil then current
            for current across chunk
-           for index from 0
-           with offset = 0
+           for index of-type array-length from 0
+           with offset of-type array-length = 0
            do (unless (and (eql previous #\Return)
                            (eql current #\Newline))
                 (unless (= index offset)
