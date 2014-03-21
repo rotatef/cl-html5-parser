@@ -27,8 +27,14 @@
    (name :initarg :name :initform nil :reader node-name)
    (namespace :initarg :namespace :initform nil :reader node-namespace)
    (parent :initform nil :reader node-parent)
-   (value :initform nil :initarg :value :reader node-value)
-   (child-nodes :initform nil :accessor %node-child-nodes)))
+   (value :initform nil :initarg :value
+          :reader node-value
+          :accessor %node-value)
+   (child-nodes :initform nil :accessor %node-child-nodes)
+   (last-child :initform nil :accessor last-child)))
+
+(defmethod (setf %node-child-nodes) :after (value (node node))
+  (setf (last-child node) (last value)))
 
 (defclass document (node)
   ((type :initform :document :allocation :class)))
@@ -81,7 +87,7 @@
   (car (%node-child-nodes node)))
 
 (defun node-last-child (node)
-  (car (last (%node-child-nodes node))))
+  (car (last-child node)))
 
 (defun node-previous-sibling (node)
   (loop for (this next) on (%node-child-nodes (node-parent node))
@@ -95,8 +101,12 @@
   (when (node-parent child)
     (node-remove-child (node-parent child) child))
   (setf (slot-value child 'parent) node)
-  (setf (%node-child-nodes node)
-        (append (%node-child-nodes node) (list child))))
+  (if (%node-child-nodes node)
+      (setf (last-child node)
+            (push child (cdr (last-child node))))
+      (setf (%node-child-nodes node)
+            (list child)))
+  (%node-child-nodes node))
 
 (defun node-remove-child (node child)
   (setf (%node-child-nodes node)
