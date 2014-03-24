@@ -20,7 +20,16 @@
 
 (in-package :html5-constants)
 
-(defparameter +namespaces+
+(defmacro defglobal (name value &optional docstring)
+  (let ((docstring (and docstring (list docstring))))
+    ;; SBCL evaluates the init value of a global at compile time.
+    #+sbcl `(progn (sb-ext:defglobal ,name nil ,@docstring)
+                   (setq ,name ,value)
+                   ',name)
+    #+ccl `(ccl:defstatic ,name ,value ,@docstring)
+    #-(or sbcl ccl) `(defparameter ,name ,value ,@docstring)))
+
+(defglobal +namespaces+
   '(("html" . "http://www.w3.org/1999/xhtml")
     ("mathml" ."http://www.w3.org/1998/Math/MathML")
     ("svg" . "http://www.w3.org/2000/svg")
@@ -34,7 +43,7 @@
 (defun find-prefix (namespace)
   (car (find namespace +namespaces+ :test #'string= :key #'cdr)))
 
-(defparameter +scoping-elements+
+(defglobal +scoping-elements+
   `((,(find-namespace "html") . "applet")
     (,(find-namespace "html") . "caption")
     (,(find-namespace "html") . "html")
@@ -54,7 +63,7 @@
     (,(find-namespace "svg") . "title")))
 
 
-(defparameter +formatting-elements+
+(defglobal +formatting-elements+
   `((,(find-namespace "html") . "a")
     (,(find-namespace "html") . "b")
     (,(find-namespace "html") . "big")
@@ -70,7 +79,7 @@
     (,(find-namespace "html") . "tt")
     (,(find-namespace "html") . "u")))
 
-(defparameter +special-elements+
+(defglobal +special-elements+
   `((,(find-namespace "html") . "address")
     (,(find-namespace "html") . "applet")
     (,(find-namespace "html") . "area")
@@ -152,13 +161,13 @@
     (,(find-namespace "html") . "xmp")
     (,(find-namespace "svg") . "foreignObject")))
 
-(defparameter +html-integration-point-elements+
+(defglobal +html-integration-point-elements+
   `((,(find-namespace "mathml") . "annotation-xml")
     (,(find-namespace "svg") . "foreignObject")
     (,(find-namespace "svg") . "desc")
     (,(find-namespace "svg") . "title")))
 
-(defparameter +mathml-text-integration-point-elements+
+(defglobal +mathml-text-integration-point-elements+
   `((,(find-namespace "mathml") . "mi")
     (,(find-namespace "mathml") . "mo")
     (,(find-namespace "mathml") . "mn")
@@ -167,7 +176,7 @@
 
 (defconstant +eof+ '+eof+)
 
-(defparameter +token-types+
+(defglobal +token-types+
   '(:doctype 0
     :characters 1
     :space-characters 2
@@ -177,28 +186,28 @@
     :comment 6
     :parse-error 7))
 
-(defparameter +tag-token-types+
+(defglobal +tag-token-types+
   '(:start-tag :end-tag :empty-tag))
 
-(defparameter +space-characters+
+(defglobal +space-characters+
   '(#\Tab
     #\Newline
     #\u000C
     #\Space
     #\Return))
 
-(defparameter +table-insert-mode-elements+
+(defglobal +table-insert-mode-elements+
   '("table"
     "tbody"
     "tfoot"
     "thead"
     "tr"))
 
-(defparameter +ascii-lowercase+ "abcdefghijklmnopqrstuvwxyz")
-(defparameter +ascii-uppercase+ "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
-(defparameter +ascii-letters+ "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-(defparameter +digits+ "0123456789")
-(defparameter +hex-digits+ "0123456789abcdefABCDEF")
+(defglobal +ascii-lowercase+ "abcdefghijklmnopqrstuvwxyz")
+(defglobal +ascii-uppercase+ "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+(defglobal +ascii-letters+ "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+(defglobal +digits+ "0123456789")
+(defglobal +hex-digits+ "0123456789abcdefABCDEF")
 
 (defun ascii-letter-p (c)
   (let ((code (char-code c)))
@@ -214,7 +223,7 @@
     out))
 
 
-(defparameter +replacement-characters+
+(defglobal +replacement-characters+
   '(#x0 #\uFFFD
     #x0d #\u000D
     #x80 #\u20AC
@@ -252,11 +261,11 @@
     #x9F #\u0178))
 
 
-(defparameter +cdata-elements+
+(defglobal +cdata-elements+
   '("title"
     "textarea"))
 
-(defparameter +rcdata-elements+
+(defglobal +rcdata-elements+
   '("style"
     "script"
     "xmp"
@@ -265,13 +274,13 @@
     "noframes"
     "noscript"))
 
-(defparameter +html-integration-point-elements+
+(defglobal +html-integration-point-elements+
   `((,(find-namespace "mathml") . "annotation-xml")
     (,(find-namespace "svg") . "foreignObject")
     (,(find-namespace "svg") . "desc")
     (,(find-namespace "svg") . "title")))
 
-(defparameter +mathml-text-integration-point-elements+
+(defglobal +mathml-text-integration-point-elements+
   `((,(find-namespace "mathml") . "mi")
     (,(find-namespace "mathml") . "mo")
     (,(find-namespace "mathml") . "mn")
@@ -284,7 +293,7 @@
        do (setf (gethash from rhash) to))))
 
 
-(defparameter +quirks-mode-doctypes-regexp+
+(defglobal +quirks-mode-doctypes-regexp+
   (cl-ppcre:create-scanner
    '(:sequence :start-anchor
      (:alternation
@@ -344,7 +353,7 @@
       "-//webtechs//dtd mozilla html 2.0//"
       "-//webtechs//dtd mozilla html//"))))
 
-(defparameter +heading-elements+
+(defglobal +heading-elements+
   '("h1"
     "h2"
     "h3"
