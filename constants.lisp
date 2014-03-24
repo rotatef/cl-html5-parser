@@ -200,6 +200,11 @@
 (defparameter +digits+ "0123456789")
 (defparameter +hex-digits+ "0123456789abcdefABCDEF")
 
+(defun ascii-letter-p (c)
+  (let ((code (char-code c)))
+    (or (<= #.(char-code #\a) code #.(char-code #\z))
+        (<= #.(char-code #\A) code #.(char-code #\Z)))))
+
 (defun ascii-upper-2-lower (string)
   (let ((out (copy-seq string)))
     (dotimes (i (length string))

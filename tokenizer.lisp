@@ -217,7 +217,7 @@
                              (not (eql #\; (car stack)))
                              (or (eql next-char #\=)
                                  (find next-char +digits+)
-                                 (find next-char +ascii-letters+)))
+                                 (ascii-letter-p next-char)))
                         ; Is this a parse error really?
                         (push-token self '(:type :parse-error :data :bogus))
                         (setf output (concatenate 'string "&" (coerce (reverse stack) 'string))))
@@ -277,7 +277,7 @@
            ;; Directly after emitting a token you switch back to the "data
            ;; state". At that point spaceCharacters are important so they are
            ;; emitted separately.
-	   (push-token* self :space-characters
+           (push-token* self :space-characters
                         data
                         (html5-stream-chars-until stream +space-characters+ t))
            ;; No need to update lastFourChars here, since the first space will
@@ -374,7 +374,7 @@
             (setf state :markup-declaration-open-state))
           ((eql data #\/)
             (setf state :close-tag-open-state))
-          ((find data +ascii-letters+)
+          ((ascii-letter-p data)
            (setf current-token (list :type :start-tag
                                      :name (make-array 1 :element-type 'character
                                                           :initial-element data
@@ -406,7 +406,7 @@
 (defstate :close-tag-open-state
     (stream state current-token)
   (let ((data (html5-stream-char stream)))
-    (cond ((find data +ascii-letters+)
+    (cond ((ascii-letter-p data)
            (setf current-token (list :type :end-tag
                                      :name (make-array 1 :element-type 'character
                                                           :initial-element data
@@ -462,7 +462,7 @@
 
 (defstate :rcdata-end-tag-open-state (stream state temporary-buffer)
   (let ((data (html5-stream-char stream)))
-    (cond ((find data +ascii-letters+)
+    (cond ((ascii-letter-p data)
            (setf temporary-buffer (concatenate 'string temporary-buffer (string data)))
            (setf state :rcdata-end-tag-name-state))
           (t
@@ -497,11 +497,11 @@
                                      :self-closing nil))
            (emit-current-token self)
            (setf state :data-state))
-          ((find data +ascii-letters+)
+          ((ascii-letter-p data)
            (setf temporary-buffer (concatenate 'string temporary-buffer (string data))))
-	  (t
+          (t
            (push-token* self :characters "</" temporary-buffer)
-	   (html5-stream-unget stream data)
+           (html5-stream-unget stream data)
            (setf state :rcdata-state)))))
 
 (defstate :rawtext-less-than-sign-state (stream state temporary-buffer)
@@ -516,7 +516,7 @@
 
 (defstate :rawtext-end-tag-open-state (stream state temporary-buffer)
   (let ((data (html5-stream-char stream)))
-    (cond ((find data +ascii-letters+)
+    (cond ((ascii-letter-p data)
            (setf temporary-buffer (concatenate 'string temporary-buffer (string data)))
            (setf state :rawtext-end-tag-name-state))
           (t
@@ -551,7 +551,7 @@
                                      :self-closing nil))
            (emit-current-token self)
            (setf state :data-state))
-          ((find data +ascii-letters+)
+          ((ascii-letter-p data)
            (setf temporary-buffer (concatenate 'string temporary-buffer (string data))))
           (t
            (push-token* self :characters "</" temporary-buffer)
@@ -573,7 +573,7 @@
 
 (defstate :script-data-end-tag-open-state (stream state temporary-buffer)
   (let ((data (html5-stream-char stream)))
-    (cond ((find data +ascii-letters+)
+    (cond ((ascii-letter-p data)
            (setf temporary-buffer (concatenate 'string temporary-buffer (string data)))
            (setf state :script-data-end-tag-name-state))
           (t
@@ -608,7 +608,7 @@
                                      :self-closing nil))
            (emit-current-token self)
            (setf state :data-state))
-          ((find data +ascii-letters+)
+          ((ascii-letter-p data)
            (setf temporary-buffer (concatenate 'string temporary-buffer (string data))))
           (t
            (push-token* self :characters "</" temporary-buffer)
@@ -689,7 +689,7 @@
     (cond ((eql data #\/)
            (setf temporary-buffer "")
            (setf state :script-data-escaped-end-tag-open-state))
-          ((find data +ascii-letters+)
+          ((ascii-letter-p data)
            (push-token* self :characters "<" data)
            (setf temporary-buffer (ascii-upper-2-lower (string data)))
            (setf state :script-data-double-escape-start-state))
@@ -700,7 +700,7 @@
 
 (defstate :script-data-escaped-end-tag-open-state (stream state temporary-buffer)
   (let ((data (html5-stream-char stream)))
-    (cond ((find data +ascii-letters+)
+    (cond ((ascii-letter-p data)
            (setf temporary-buffer (string data))
            (setf state :script-data-escaped-end-tag-name-state))
           (t
@@ -735,7 +735,7 @@
                                      :self-closing nil))
            (emit-current-token self)
            (setf state :data-state))
-          ((find data +ascii-letters+)
+          ((ascii-letter-p data)
            (setf temporary-buffer (concatenate 'string temporary-buffer (string data))))
           (t
            (push-token* self :characters "</" temporary-buffer)
@@ -750,7 +750,7 @@
            (if (string= (string-downcase temporary-buffer) "script")
                (setf state :script-data-double-escaped-state)
                (setf state :script-data-escaped-state)))
-          ((find data +ascii-letters+)
+          ((ascii-letter-p data)
            (push-token* self :characters data)
            (setf temporary-buffer (concatenate 'string temporary-buffer (string data))))
           (t
@@ -834,7 +834,7 @@
            (if (string= (string-downcase temporary-buffer) "script")
                (setf state :script-data-escaped-state)
                (setf state :script-data-double-escaped-state)))
-          ((find data +ascii-letters+)
+          ((ascii-letter-p data)
            (push-token* self :characters data)
            (setf temporary-buffer (concatenate 'string temporary-buffer (string data))))
           (t
@@ -845,7 +845,7 @@
   (let ((data (html5-stream-char stream)))
     (cond ((find data +space-characters+)
            (html5-stream-chars-until stream +space-characters+ t))
-          ((find data +ascii-letters+)
+          ((ascii-letter-p data)
            (add-attribute current-token data)
            (setf state :attribute-name-state))
           ((eql data #\>)
@@ -873,7 +873,7 @@
         (emit-token nil))
     (cond ((eql data #\=)
            (setf state :before-attribute-value-state))
-          ((find data +ascii-letters+)
+          ((ascii-letter-p data)
            (add-to-attr-name current-token data
                              (html5-stream-chars-until stream +ascii-letters+ t))
            (setf leaving-this-state nil))
@@ -923,7 +923,7 @@
            (setf state :before-attribute-value-state))
           ((eql data #\>)
            (emit-current-token self))
-          ((find data +ascii-letters+)
+          ((ascii-letter-p data)
            (add-attribute current-token data)
            (setf state :attribute-name-state))
           ((eql data #\/)
