@@ -66,6 +66,11 @@
             (find-namespace "html"))
         (node-name node)))
 
+(defun node-name-tuple-values (node)
+  (values (or (node-namespace node)
+              (find-namespace "html"))
+          (node-name node)))
+
 (defun node-has-content (node)
   (not (null (node-first-child node))))
 
@@ -83,15 +88,12 @@
 
 (defun node-append-child* (node child)
   (let ((last-child (node-last-child node)))
-    (when (and (eql :text (node-type child))
-               last-child
-               (eql :text (node-type last-child)))
-      (node-remove-child node last-child)
-      (setf child (make-text-node
-                   (concatenate 'string
-                                (node-value last-child)
-                                (node-value child))))))
-  (node-append-child node child))
+    (if (and (eql :text (node-type child))
+             last-child
+             (eql :text (node-type last-child)))
+        (nconcatf (%node-value last-child)
+                  (%node-value child))
+        (node-append-child node child))))
 
 (defun node-insert-before* (node child insert-before)
   (when (eql :text (node-type child))
@@ -298,20 +300,40 @@
          (when (string= (node-name item) name)
            (return item)))))
 
+(defun scope-tree ()
+  (load-time-value
+   (flet ((unflatten (alist)
+            "Turn an alist into a tree."
+            (let ((alist2
+                    (mapcar #'list
+                            (remove-duplicates (mapcar #'car alist)
+                                               :test #'equal))))
+              (loop for (key . value) in alist
+                    do (push value (cdr (assoc key alist2
+                                               :test #'equal))))
+              ;; Put the XHTML ns first.
+              (sort alist2 #'<
+                    :key (lambda (pair)
+                           (position (car pair)
+                                     '("http://www.w3.org/1999/xhtml"
+                                       "http://www.w3.org/2000/svg"
+                                       "http://www.w3.org/1998/Math/MathML")
+                                     :test #'string=))))))
+     (let ((html (find-namespace "html")))
+       `((nil . ,(unflatten +scoping-elements+))
+         ("button" . ,(unflatten
+                       `(,@+scoping-elements+
+                         (,html . "button"))))
+         ("list" . ,(unflatten
+                     `(,@+scoping-elements+
+                       (,html . "ol")
+                       (,html . "ul"))))
+         ("table" . ((,html "html" "table")))
+         ("select" . ((,html "optgroup" "option"))))))))
+
 (defun element-in-scope (target &optional variant)
   (let ((list-elements
-         (cdr (assoc variant
-                     `((nil . ,+scoping-elements+)
-                       ("button" . (,@+scoping-elements+
-                                    (,(find-namespace "html") . "button")))
-                       ("list" . (,@+scoping-elements+
-                                  (,(find-namespace "html") . "ol")
-                                  (,(find-namespace "html") . "ul")))
-                       ("table" . ((,(find-namespace "html") . "html")
-                              (,(find-namespace "html") . "table")))
-                       ("select" . ((,(find-namespace "html") . "optgroup")
-                                    (,(find-namespace "html") . "option"))))
-                     :test #'equal)))
+          (cdr (assoc variant (scope-tree) :test #'equal)))
         (invert (equal "select" variant)))
     (dolist (node (reverse (slot-value *parser* 'open-elements)))
       (when (or (and (stringp target)
@@ -319,10 +341,13 @@
                 (eql node target))
         (return-from element-in-scope t))
 
-      (let ((found (member (node-name-tuple node) list-elements :test #'equal)))
-        (when invert
-          (setf found (not found)))
-        (when found
-          (return-from element-in-scope nil))))
+      (multiple-value-bind (ns name)
+          (node-name-tuple-values node)
+        (let ((found (member name (cdr (assoc ns list-elements :test #'string=))
+                             :test #'string=)))
+          (when invert
+            (setf found (not found)))
+          (when found
+            (return-from element-in-scope nil)))))
 
     (error "We should never reach this point")))

@@ -20,8 +20,6 @@
 
 (in-package :html5-parser)
 
-(declaim (optimize (speed 0) (debug 3)))
-
 (defclass html-tokenizer ()
   ((stream :initarg :stream :reader tokenizer-stream)
    (cdata-switch-helper :initarg :cdata-switch-helper
@@ -67,35 +65,66 @@
   (with-slots (token-queue) self
     (push token token-queue)))
 
+(defun make-growable-string (&optional (init ""))
+  "Make an adjustable string with a fill pointer.
+Given INIT, a string, return an adjustable version of it with the fill
+pointer at the end."
+  (let ((string
+          (make-array (max 5 (length init))
+                      :element-type 'character
+                      :adjustable t
+                      :fill-pointer 0)))
+    (when init
+      (loop for c across init
+            do (vector-push-extend c string (length string))))
+    string))
+
+(defun nconcat (string &rest data)
+  "Destructively concatenate DATA, string designators, to STRING."
+  (declare (optimize speed))
+  (unless (array-has-fill-pointer-p string)
+    (setf string (make-growable-string string)))
+  (labels ((conc (string x)
+             (typecase x
+               (character
+                (vector-push-extend x string))
+               (string
+                (let ((len (length x)))
+                  (loop for c across x do
+                    (vector-push-extend c string len))))
+               (symbol (conc string (string x))))))
+    (dolist (x data string)
+      (conc string x))))
+
+(define-modify-macro nconcatf (&rest data) nconcat)
+
 (defun push-token* (self type &rest data)
   "Push a token with :type type and :data the a string concatenation of data"
   (push-token self (list :type type
-                         :data (apply #'concatenate 'string (mapcar #'string data)))))
+                         :data (apply #'nconcat (make-growable-string) data))))
 
 (defun add-attribute (token name)
   (setf (getf token :data) (append (getf token :data)
-                                   (list (cons (string name) "")))))
+                                   (list (cons (make-growable-string (string name))
+                                               (make-growable-string))))))
 
 (defun add-to-attr-name (token &rest data)
   (setf (caar (last (getf token :data)))
-        (apply #'concatenate
-               'string
+        (apply #'nconcat
                (caar (last (getf token :data)))
-               (mapcar #'string data))))
+               data)))
 
 (defun add-to-attr-value (token &rest data)
   (setf (cdar (last (getf token :data)))
-        (apply #'concatenate
-               'string
+        (apply #'nconcat
                (cdar (last (getf token :data)))
-               (mapcar #'string data))))
+               data)))
 
 (defun add-to (token indicator &rest data)
   (setf (getf token indicator)
-        (apply #'concatenate
-               'string
+        (apply #'nconcat
                (getf token indicator)
-               (mapcar #'string data))))
+               data)))
 
 (defun consume-number-entity (self is-hex)
   "This function returns either U+FFFD or the character based on the
@@ -217,10 +246,10 @@
                              (not (eql #\; (car stack)))
                              (or (eql next-char #\=)
                                  (find next-char +digits+)
-                                 (find next-char +ascii-letters+)))
+                                 (ascii-letter-p next-char)))
                         ; Is this a parse error really?
                         (push-token self '(:type :parse-error :data :bogus))
-                        (setf output (concatenate 'string "&" (coerce (reverse stack) 'string))))
+                        (setf output (concatenate 'string "&" (reverse stack))))
                        (t
                         (unless (eql #\; (car stack))
                           (push-token self '(:type :parse-error
@@ -277,7 +306,7 @@
            ;; Directly after emitting a token you switch back to the "data
            ;; state". At that point spaceCharacters are important so they are
            ;; emitted separately.
-	   (push-token* self :space-characters
+           (push-token* self :space-characters
                         data
                         (html5-stream-chars-until stream +space-characters+ t))
            ;; No need to update lastFourChars here, since the first space will
@@ -374,7 +403,7 @@
             (setf state :markup-declaration-open-state))
           ((eql data #\/)
             (setf state :close-tag-open-state))
-          ((find data +ascii-letters+)
+          ((ascii-letter-p data)
            (setf current-token (list :type :start-tag
                                      :name (make-array 1 :element-type 'character
                                                           :initial-element data
@@ -406,7 +435,7 @@
 (defstate :close-tag-open-state
     (stream state current-token)
   (let ((data (html5-stream-char stream)))
-    (cond ((find data +ascii-letters+)
+    (cond ((ascii-letter-p data)
            (setf current-token (list :type :end-tag
                                      :name (make-array 1 :element-type 'character
                                                           :initial-element data
@@ -453,7 +482,7 @@
 (defstate :rcdata-less-than-sign-state (stream state temporary-buffer)
   (let ((data (html5-stream-char stream)))
     (cond ((eql data #\/)
-           (setf temporary-buffer "")
+           (setf temporary-buffer (make-growable-string))
            (setf state :rcdata-end-tag-open-state))
           (t
            (push-token* self :characters "<")
@@ -462,8 +491,8 @@
 
 (defstate :rcdata-end-tag-open-state (stream state temporary-buffer)
   (let ((data (html5-stream-char stream)))
-    (cond ((find data +ascii-letters+)
-           (setf temporary-buffer (concatenate 'string temporary-buffer (string data)))
+    (cond ((ascii-letter-p data)
+           (nconcatf temporary-buffer (string data))
            (setf state :rcdata-end-tag-name-state))
           (t
            (push-token* self :characters "</")
@@ -472,8 +501,8 @@
 
 (defstate :rcdata-end-tag-name-state (stream state temporary-buffer current-token)
   (let ((appropriate (and current-token
-                          (string= (string-downcase (getf current-token :name))
-                                   (string-downcase temporary-buffer))))
+                          (string-equal (getf current-token :name)
+                                        temporary-buffer)))
         (data (html5-stream-char stream)))
     (cond ((and (find data +space-characters+)
                 appropriate)
@@ -497,17 +526,17 @@
                                      :self-closing nil))
            (emit-current-token self)
            (setf state :data-state))
-          ((find data +ascii-letters+)
-           (setf temporary-buffer (concatenate 'string temporary-buffer (string data))))
-	  (t
+          ((ascii-letter-p data)
+           (nconcatf temporary-buffer data))
+          (t
            (push-token* self :characters "</" temporary-buffer)
-	   (html5-stream-unget stream data)
+           (html5-stream-unget stream data)
            (setf state :rcdata-state)))))
 
 (defstate :rawtext-less-than-sign-state (stream state temporary-buffer)
   (let ((data (html5-stream-char stream)))
     (cond ((eql data #\/)
-           (setf temporary-buffer "")
+           (setf temporary-buffer (make-growable-string))
            (setf state :rawtext-end-tag-open-state))
           (t
            (push-token* self :characters "<")
@@ -516,8 +545,8 @@
 
 (defstate :rawtext-end-tag-open-state (stream state temporary-buffer)
   (let ((data (html5-stream-char stream)))
-    (cond ((find data +ascii-letters+)
-           (setf temporary-buffer (concatenate 'string temporary-buffer (string data)))
+    (cond ((ascii-letter-p data)
+           (nconcatf temporary-buffer (string data))
            (setf state :rawtext-end-tag-name-state))
           (t
            (push-token* self :characters "</")
@@ -526,8 +555,8 @@
 
 (defstate :rawtext-end-tag-name-state (stream state temporary-buffer current-token)
   (let ((appropriate (and current-token
-                          (string= (string-downcase (getf current-token :name))
-                                   (string-downcase temporary-buffer))))
+                          (string-equal (getf current-token :name)
+                                        temporary-buffer)))
         (data (html5-stream-char stream)))
     (cond ((and (find data +space-characters+)
                 appropriate)
@@ -551,8 +580,8 @@
                                      :self-closing nil))
            (emit-current-token self)
            (setf state :data-state))
-          ((find data +ascii-letters+)
-           (setf temporary-buffer (concatenate 'string temporary-buffer (string data))))
+          ((ascii-letter-p data)
+           (nconcatf temporary-buffer data))
           (t
            (push-token* self :characters "</" temporary-buffer)
            (html5-stream-unget stream data)
@@ -561,7 +590,7 @@
 (defstate :script-data-less-than-sign-state (stream state temporary-buffer)
   (let ((data (html5-stream-char stream)))
     (cond ((eql data #\/)
-           (setf temporary-buffer "")
+           (setf temporary-buffer (make-growable-string))
            (setf state :script-data-end-tag-open-state))
           ((eql data #\!)
            (push-token* self :characters "<!")
@@ -573,8 +602,8 @@
 
 (defstate :script-data-end-tag-open-state (stream state temporary-buffer)
   (let ((data (html5-stream-char stream)))
-    (cond ((find data +ascii-letters+)
-           (setf temporary-buffer (concatenate 'string temporary-buffer (string data)))
+    (cond ((ascii-letter-p data)
+           (nconcatf temporary-buffer data)
            (setf state :script-data-end-tag-name-state))
           (t
            (push-token* self :characters "</")
@@ -583,8 +612,8 @@
 
 (defstate :script-data-end-tag-name-state (stream state temporary-buffer current-token)
   (let ((appropriate (and current-token
-                          (string= (string-downcase (getf current-token :name))
-                                   (string-downcase temporary-buffer))))
+                          (string-equal (getf current-token :name)
+                                        temporary-buffer)))
         (data (html5-stream-char stream)))
     (cond ((and (find data +space-characters+)
                 appropriate)
@@ -608,8 +637,8 @@
                                      :self-closing nil))
            (emit-current-token self)
            (setf state :data-state))
-          ((find data +ascii-letters+)
-           (setf temporary-buffer (concatenate 'string temporary-buffer (string data))))
+          ((ascii-letter-p data)
+           (nconcatf temporary-buffer data))
           (t
            (push-token* self :characters "</" temporary-buffer)
            (html5-stream-unget stream data)
@@ -687,9 +716,9 @@
 (defstate :script-data-escaped-less-than-sign-state (stream state temporary-buffer)
   (let ((data (html5-stream-char stream)))
     (cond ((eql data #\/)
-           (setf temporary-buffer "")
+           (setf temporary-buffer (make-growable-string))
            (setf state :script-data-escaped-end-tag-open-state))
-          ((find data +ascii-letters+)
+          ((ascii-letter-p data)
            (push-token* self :characters "<" data)
            (setf temporary-buffer (ascii-upper-2-lower (string data)))
            (setf state :script-data-double-escape-start-state))
@@ -700,7 +729,7 @@
 
 (defstate :script-data-escaped-end-tag-open-state (stream state temporary-buffer)
   (let ((data (html5-stream-char stream)))
-    (cond ((find data +ascii-letters+)
+    (cond ((ascii-letter-p data)
            (setf temporary-buffer (string data))
            (setf state :script-data-escaped-end-tag-name-state))
           (t
@@ -710,8 +739,8 @@
 
 (defstate :script-data-escaped-end-tag-name-state (stream state temporary-buffer current-token)
   (let ((appropriate (and current-token
-                          (string= (string-downcase (getf current-token :name))
-                                   (string-downcase temporary-buffer))))
+                          (string-equal (getf current-token :name)
+                                        temporary-buffer)))
         (data (html5-stream-char stream)))
     (cond ((and (find data +space-characters+)
                 appropriate)
@@ -735,8 +764,8 @@
                                      :self-closing nil))
            (emit-current-token self)
            (setf state :data-state))
-          ((find data +ascii-letters+)
-           (setf temporary-buffer (concatenate 'string temporary-buffer (string data))))
+          ((ascii-letter-p data)
+           (nconcatf temporary-buffer data))
           (t
            (push-token* self :characters "</" temporary-buffer)
            (html5-stream-unget stream data)
@@ -750,9 +779,9 @@
            (if (string= (string-downcase temporary-buffer) "script")
                (setf state :script-data-double-escaped-state)
                (setf state :script-data-escaped-state)))
-          ((find data +ascii-letters+)
+          ((ascii-letter-p data)
            (push-token* self :characters data)
-           (setf temporary-buffer (concatenate 'string temporary-buffer (string data))))
+           (nconcatf temporary-buffer (string data)))
           (t
            (html5-stream-unget stream data)
            (setf state :script-data-escaped-state)))))
@@ -820,7 +849,7 @@
   (let ((data (html5-stream-char stream)))
     (cond ((eql data #\/)
            (push-token* self :characters "/")
-           (setf temporary-buffer "")
+           (setf temporary-buffer (make-growable-string))
            (setf state :script-data-double-escape-end-state))
           (t
            (html5-stream-unget stream data)
@@ -834,9 +863,9 @@
            (if (string= (string-downcase temporary-buffer) "script")
                (setf state :script-data-escaped-state)
                (setf state :script-data-double-escaped-state)))
-          ((find data +ascii-letters+)
+          ((ascii-letter-p data)
            (push-token* self :characters data)
-           (setf temporary-buffer (concatenate 'string temporary-buffer (string data))))
+           (nconcatf temporary-buffer data))
           (t
            (html5-stream-unget stream data)
            (setf state :script-data-double-escaped-state)))))
@@ -845,7 +874,7 @@
   (let ((data (html5-stream-char stream)))
     (cond ((find data +space-characters+)
            (html5-stream-chars-until stream +space-characters+ t))
-          ((find data +ascii-letters+)
+          ((ascii-letter-p data)
            (add-attribute current-token data)
            (setf state :attribute-name-state))
           ((eql data #\>)
@@ -873,7 +902,7 @@
         (emit-token nil))
     (cond ((eql data #\=)
            (setf state :before-attribute-value-state))
-          ((find data +ascii-letters+)
+          ((ascii-letter-p data)
            (add-to-attr-name current-token data
                              (html5-stream-chars-until stream +ascii-letters+ t))
            (setf leaving-this-state nil))
@@ -923,7 +952,7 @@
            (setf state :before-attribute-value-state))
           ((eql data #\>)
            (emit-current-token self))
-          ((find data +ascii-letters+)
+          ((ascii-letter-p data)
            (add-attribute current-token data)
            (setf state :attribute-name-state))
           ((eql data #\/)
@@ -1601,7 +1630,7 @@
     (let ((null-count (count #\u0000 data)))
       (when (plusp null-count)
         (push-token self '(:type :parse-error :data :invalid-codepoint))
-        (setf data (substitute #\uFFFD #\u0000 data))))
+        (setf data (nsubstitute #\uFFFD #\u0000 data))))
     (when (plusp (length data))
       (push-token* self :characters data))
     (setf state :data-state)))
