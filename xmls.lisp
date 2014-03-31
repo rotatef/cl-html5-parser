@@ -59,3 +59,6 @@ at. If the node is a document-fragement a list of XMLS trees is returned."
                       (nreverse children)))))
     ((:text :comment)
      (node-value node))))
+
+(defmethod transform-html5-dom ((to-type (eql :xmls)) node)
+  (node-to-xmls node))

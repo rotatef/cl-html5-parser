@@ -27,7 +27,7 @@ Parsing
 Parsing functions are in the package HTML5-PARSER.
 
 ~_f_~
-*parse-html5* _source &key encoding strictp
+*parse-html5* _source &key encoding strictp dom
               => document, errors_
 
 Parse an HTML document from source. Source can be a string, a pathname
@@ -41,8 +41,14 @@ Returns two values. The primary value is the document node. The
 secondary value is a list of errors found during parsing. The format
 of this list is subject to change.
 
+The type of document depends on the dom parameter. By default it's an
+instance of cl-html5-parser's own dom implementation. Setting dom to
+:xmls the document is returned as an XMLS compatible document. Support
+for other DOM implementations can be added by defining a method for
+the generic function transform-html5-dom.
+
 ~_f_~
-*parse-html5-fragment* _source &key container encoding strictp as-xmls
+*parse-html5-fragment* _source &key container encoding strictp dom
                        => document-fragment, errors_
 
 Parses a fragment of HTML. Container sets the context, defaults to
@@ -52,7 +58,7 @@ Parses a fragment of HTML. Container sets the context, defaults to
 Example
 ~~~~~~~
 ----------------------------------------------------------------------------------------
-(html5-parser:node-to-xmls (html5-parser:parse-html5-fragment "Parse <i>some</i> HTML"))
+(html5-parser:parse-html5-fragment "Parse <i>some</i> HTML" :dom :xmls)
 ==> ("Parse " ("i" NIL "some") " HTML")
 ----------------------------------------------------------------------------------------
 
@@ -66,6 +72,10 @@ traversing documents are exported by the HTML5-PARSER package.
 
 Converting to XMLS
 ~~~~~~~~~~~~~~~~~~
+
+The easy way, just call parse-html with the dom parameter set :xmls. If you
+need more control of the transformation you can instead use this
+function:
 
 ~_f_~
 *html5-parser:node-to-xmls* _node &optional include-namespace-p

@@ -22,21 +22,26 @@
 
 ;; external interface
 
-(defun parse-html5 (source &key encoding strictp container)
+(defun parse-html5 (source &key encoding strictp container result dom)
   (parse-html5-from-source source
                            :encoding encoding
                            :strictp strictp
-                           :container container))
+                           :container container
+                           :dom dom))
 
-(defun parse-html5-fragment (source &key encoding strictp (container "div"))
+(defun parse-html5-fragment (source &key encoding strictp (container "div") dom)
   (parse-html5-from-source source
                            :encoding encoding
                            :strictp strictp
-                           :container container))
+                           :container container
+                           :dom dom))
+
+(defgeneric transform-html5-dom (to-type node))
+
 
 ;; internal
 
-(defun parse-html5-from-source (source &key container encoding strictp)
+(defun parse-html5-from-source (source &key container encoding strictp dom)
   (let ((*parser* (make-instance 'html-parser
                                  :strict strictp)))
     (parser-parse source
@@ -49,7 +54,9 @@
                    (node-reparent-children (first open-elements) fragment)
                    fragment)
                  (document*))))
-        (values document
+        (values (if dom
+                    (transform-html5-dom dom document)
+                    document)
                 (reverse errors))))))
 
 (defvar *phase*)

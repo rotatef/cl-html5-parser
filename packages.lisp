@@ -60,6 +60,7 @@
   (:export
    #:parse-html5
    #:parse-html5-fragment
+   #:transform-html5-dom
 
    #:node-to-xmls
 
