@@ -62,8 +62,6 @@
    #:parse-html5-fragment
    #:transform-html5-dom
 
-   #:node-to-xmls
-
    ;; A simple DOM
    #:make-document
    #:make-fragment

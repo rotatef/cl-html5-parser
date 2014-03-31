@@ -62,3 +62,6 @@ at. If the node is a document-fragement a list of XMLS trees is returned."
 
 (defmethod transform-html5-dom ((to-type (eql :xmls)) node)
   (node-to-xmls node))
+
+(defmethod transform-html5-dom ((to-type (eql :xmls-ns)) node)
+  (node-to-xmls node t))

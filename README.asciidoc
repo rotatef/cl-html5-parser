@@ -42,10 +42,8 @@ secondary value is a list of errors found during parsing. The format
 of this list is subject to change.
 
 The type of document depends on the dom parameter. By default it's an
-instance of cl-html5-parser's own dom implementation. Setting dom to
-:xmls the document is returned as an XMLS compatible document. Support
-for other DOM implementations can be added by defining a method for
-the generic function transform-html5-dom.
+instance of cl-html5-parser's own dom implementation. See the DOM
+paragraph below for more information.
 
 ~_f_~
 *parse-html5-fragment* _source &key container encoding strictp dom
@@ -70,21 +68,28 @@ http://en.wikipedia.org/wiki/Document_Object_Model[DOM]. cl-html5-parser
 defines a minimal DOM implementation for this task. Functions for
 traversing documents are exported by the HTML5-PARSER package.
 
-Converting to XMLS
-~~~~~~~~~~~~~~~~~~
+Alternativly the parser can be instructed to to convert the document
+into other DOM implemenations using the dom parameter. The convertion
+is done by simply calling the generic function
+transform-html5-dom. Support for other DOM implementations can be
+added by defining new methods for this generic function. Below is the
+currently supported target types.
 
-The easy way, just call parse-html with the dom parameter set :xmls. If you
-need more control of the transformation you can instead use this
-function:
 
-~_f_~
-*html5-parser:node-to-xmls* _node &optional include-namespace-p
-                            => list_
+:XMLS
+~~~~~
 
 Converts a node into a simple
 http://common-lisp.net/project/xmls/[XMLS]-like list structure.
-If node is a document fragement a list of XMLS nodes a returned. In
+If node is a document fragment a list of XMLS nodes a returned. In
 all other cases a single XMLS node is returned.
+
+:XMLS-NS
+~~~~~~~~
+
+Like :XMLS, but with namespaces. Tag names are conses of name and
+namespace URI.
+
 
 License
 -------
