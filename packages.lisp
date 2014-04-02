@@ -88,4 +88,5 @@
    #:node-previous-sibling
    #:node-next-sibling
    #:element-map-attributes
-   #:element-map-children))
+   #:element-map-children)
+  (:nicknames :h5))
