@@ -9,4 +9,4 @@ install:
   - curl https://raw2.github.com/luismbo/cl-travis/master/install.sh | bash
 
 script:
-  - cl-launch -i "(ql:quickload :cl-html5-parser-tests) (html5-parser-tests::run-html5-parser-tests)"
+  - cl-launch -i "(ql:quickload :cl-html5-parser) (ql:quickload :cl-html5-parser-tests) (html5-parser-tests::run-html5-parser-tests)"
