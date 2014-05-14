@@ -1,0 +1,12 @@
+language: lisp
+
+env:
+  matrix:
+    - LISP=sbcl
+    - LISP=ecl
+
+install:
+  - curl https://raw2.github.com/luismbo/cl-travis/master/install.sh | bash
+
+script:
+  - cl-launch -i "(asdf:test-system :cl-html5-parser)"
