@@ -28,8 +28,7 @@
    (namespace :initarg :namespace :initform nil :reader node-namespace)
    (parent :initform nil :reader node-parent)
    (value :initform nil :initarg :value
-          :reader node-value
-          :accessor %node-value)
+          :accessor node-value)
    (child-nodes :initform nil :accessor %node-child-nodes)
    (last-child :initform nil :accessor last-child)))
 
@@ -40,10 +39,10 @@
   ((type :initform :document :allocation :class)))
 
 (defclass document-fragment (document)
-  ((type :initform :fragment :allocation :class)))
+  ((type :initform :document-fragment :allocation :class)))
 
 (defclass document-type (node)
-  ((type :initform :doctype :allocation :class)
+  ((type :initform :document-type :allocation :class)
    (public-id :initarg :public-id :reader node-public-id)
    (system-id :initarg :system-id :reader node-system-id)))
 
@@ -64,19 +63,24 @@
 (defun make-document ()
   (make-instance 'document))
 
-(defun make-fragment ()
+(defun make-fragment (document)
+  (declare (ignore document))
   (make-instance 'document-fragment))
 
-(defun make-doctype (name public-id system-id)
+(defun make-doctype (document name public-id system-id)
+  (declare (ignore document))
   (make-instance 'document-type :name name :public-id public-id :system-id system-id))
 
-(defun make-comment (data)
+(defun make-comment (document data)
+  (declare (ignore document))
   (make-instance 'comment-node :value data))
 
-(defun make-element (name namespace)
+(defun make-element (document name namespace)
+  (declare (ignore document))
   (make-instance 'element :name name :namespace namespace))
 
-(defun make-text-node (data)
+(defun make-text-node (document data)
+  (declare (ignore document))
   (make-instance 'text-node :value data))
 
 ;;;

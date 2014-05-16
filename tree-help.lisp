@@ -43,18 +43,19 @@
   (ecase (node-type node)
     (:document
       (make-document))
-    (:fragment
-     (make-fragment))
-    (:doctype
-     (make-doctype (node-name node)
+    (:document-fragment
+     (make-fragment (document*)))
+    (:document-type
+     (make-doctype (document*)
+                   (node-name node)
                    (node-public-id node)
                    (node-system-id node)))
     (:comment
-      (make-comment (node-value node)))
+      (make-comment (document*) (node-value node)))
     (:text
-     (make-text-node (node-value node)))
+     (make-text-node (document*) (node-value node)))
     (:element
-     (let ((clone (make-element (node-name node) (node-namespace node))))
+     (let ((clone (make-element (document*) (node-name node) (node-namespace node))))
        (element-map-attributes
         (lambda (name namespace value)
           (setf (element-attribute clone name namespace) value))
@@ -91,8 +92,8 @@
     (if (and (eql :text (node-type child))
              last-child
              (eql :text (node-type last-child)))
-        (nconcatf (%node-value last-child)
-                  (%node-value child))
+        (nconcatf (node-value last-child)
+                  (node-value child))
         (node-append-child node child))))
 
 (defun node-insert-before* (node child insert-before)
@@ -102,6 +103,7 @@
                  (eql :text (node-type prev-child)))
         (node-remove-child node prev-child)
         (setf child (make-text-node
+                     (document*)
                      (concatenate 'string
                                   (node-value prev-child)
                                   (node-value child)))))))
@@ -114,8 +116,8 @@
 
 (defun node-insert-text (node data &optional insert-before)
   (if insert-before
-      (node-insert-before* node (make-text-node data) insert-before)
-      (node-append-child* node (make-text-node data))))
+      (node-insert-before* node (make-text-node (document*) data) insert-before)
+      (node-append-child* node (make-text-node (document*) data))))
 
 (defun last-open-element ()
   (with-slots (open-elements) *parser*
@@ -124,7 +126,8 @@
 (defun create-element (token)
   "Create an element but don't insert it anywhere"
   (with-slots (html-namespace) *parser*
-    (let ((element (make-element (getf token :name)
+    (let ((element (make-element (document*)
+                                 (getf token :name)
                                  (or (getf token :namespace)
                                      html-namespace))))
       (loop for (name . value) in (getf token :data)
@@ -143,7 +146,8 @@
 
 (defun insert-doctype (token)
   (node-append-child (document*)
-                     (make-doctype (getf token :name)
+                     (make-doctype (document*)
+                                   (getf token :name)
                                    (getf token :public-id)
                                    (getf token :system-id))))
 
@@ -151,7 +155,7 @@
   (with-slots (open-elements) *parser*
     (unless parent
       (setf parent (car (last open-elements))))
-    (node-append-child parent (make-comment (getf token :data)))))
+    (node-append-child parent (make-comment (document*) (getf token :data)))))
 
 (defun insert-element-normal (token)
   (with-slots (open-elements) *parser*

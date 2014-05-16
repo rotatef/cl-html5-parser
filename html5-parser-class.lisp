@@ -28,7 +28,7 @@
    (inner-html-mode)
    (container :initform "div")
    (tokenizer)
-   (document :initform (make-instance 'document))
+   (document :initform (make-document))
    (errors :initform '())
    (phase :accessor parser-phase)
    first-start-tag

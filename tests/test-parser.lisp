@@ -24,7 +24,7 @@
 
 (defun print-node (node stream)
   (ecase (node-type node)
-    (:doctype
+    (:document-type
      (format stream "<!DOCTYPE ~A" (node-name node))
      (when (or (node-public-id node)
                (node-system-id node))
@@ -47,7 +47,7 @@
 
 (defun print-tree (node &key (stream *standard-output*) (indent 0))
   (ecase (node-type node)
-    ((:document :fragment)
+    ((:document :document-fragment)
      (element-map-children (lambda (child)
                              (print-tree child
                                          :stream stream
@@ -78,7 +78,7 @@
                                            :stream stream
                                            :indent indent))
                           node)))
-     ((:text :comment :doctype)
+     ((:text :comment :document-type)
       (format stream "~&|~vT" indent)
       (print-node node stream)))
   node)

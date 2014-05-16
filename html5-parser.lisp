@@ -50,7 +50,7 @@
     (with-slots (open-elements errors) *parser*
       (let ((document
              (if container
-                 (let ((fragment (make-fragment)))
+                 (let ((fragment (make-fragment (document*))))
                    (node-reparent-children (first open-elements) fragment)
                    fragment)
                  (document*))))
