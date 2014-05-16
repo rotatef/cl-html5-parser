@@ -23,14 +23,15 @@
   :description "A HTML5 parser for Common Lisp"
   :licence "GNU Lesser General Public License"
   :author "Thomas Bakketun <thomas.bakketun@copyleft.no>"
-  :depends-on (:cl-ppcre :flexi-streams #:string-case)
+  :depends-on (:cl-ppcre :flexi-streams :string-case :cxml)
   :serial t
   :components ((:file "packages")
                (:file "constants")
                (:file "entities")
                (:file "inputstream")
                (:file "tokenizer")
-               (:file "simple-tree")
+               ;(:file "simple-tree")
+               (:file "cxml-dom")
                (:file "html5-parser-class")
                (:file "tree-help")
                (:file "html5-parser")
