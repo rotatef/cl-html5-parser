@@ -22,7 +22,7 @@
 
 ;; external interface
 
-(defun parse-html5 (source &key encoding strictp container result dom)
+(defun parse-html5 (source &key encoding strictp container dom)
   (parse-html5-from-source source
                            :encoding encoding
                            :strictp strictp
