@@ -1,5 +1,6 @@
 ;;;;  HTML5 parser for Common Lisp
 ;;;;
+;;;;  Copyright (C) 2014 Joe Taylor <joekarma@gmail.com>
 ;;;;  Copyright (C) 2012 Thomas Bakketun <thomas.bakketun@copyleft.no>
 ;;;;  Copyright (C) 2012 Asgeir Bjørlykke <asgeir@copyleft.no>
 ;;;;  Copyright (C) 2012 Mathias Hellevang

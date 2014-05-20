@@ -23,7 +23,7 @@
   :description "A HTML5 parser for Common Lisp"
   :licence "GNU Lesser General Public License"
   :author "Thomas Bakketun <thomas.bakketun@copyleft.no>"
-  :depends-on (:cl-ppcre :flexi-streams #:string-case :cxml)
+  :depends-on (:cl-ppcre :flexi-streams :string-case)
   :serial t
   :components ((:file "packages")
                (:file "constants")
@@ -34,8 +34,7 @@
                (:file "html5-parser-class")
                (:file "tree-help")
                (:file "html5-parser")
-               (:file "xmls")
-               (:file "cxml-dom")))
+               (:file "xmls")))
 
 (defsystem #:cl-html5-parser-tests
   :depends-on (:cl-html5-parser :stefil :cl-json :split-sequence)
@@ -54,3 +53,15 @@
   (operate 'load-op '#:cl-html5-parser-tests)
   (funcall (find-symbol (string :run-html5-parser-tests)
                         :html5-parser-tests)))
+
+(defsystem #:cl-html5-parser-cxml
+  :name "cl-html5-parser"
+  :description "CXML integration for cl-html5-parser"
+  :licence "GNU Lesser General Public License"
+  :author "Thomas Bakketun <thomas.bakketun@copyleft.no>"
+  :depends-on (:cl-html5-parser :cxml)
+  :serial t
+  :components ((:module "cxml"
+                        :serial t
+                        :components
+                        ((:file "cxml-dom")))))
