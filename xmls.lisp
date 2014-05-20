@@ -32,7 +32,7 @@ at. If the node is a document-fragement a list of XMLS trees is returned."
                              node)
        (assert root)
        (node-to-xmls root include-namespace-p)))
-    (:fragment
+    (:document-fragment
      (let (xmls-nodes)
        (element-map-children (lambda (node)
                                (push (node-to-xmls node include-namespace-p)
