@@ -58,6 +58,7 @@
    :html5-constants
    :cl-ppcre)
   (:export
+   #:parse
    #:parse-html5
    #:parse-html5-fragment
    #:transform-html5-dom
@@ -88,4 +89,5 @@
    #:node-previous-sibling
    #:node-next-sibling
    #:element-map-attributes
-   #:element-map-children))
+   #:element-map-children)
+  (:nicknames :h5))
