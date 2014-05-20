@@ -29,6 +29,14 @@
                            :container container
                            :dom dom))
 
+(defun parse (source &key encoding strictp container result (dom :cxml-dom))
+  (parse-html5 source
+               :encoding encoding
+               :strictp strictp
+               :container container
+               :result result
+               :dom dom))
+
 (defun parse-html5-fragment (source &key encoding strictp (container "div") dom)
   (parse-html5-from-source source
                            :encoding encoding
