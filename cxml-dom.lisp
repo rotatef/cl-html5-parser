@@ -30,7 +30,7 @@
                              node)
        (assert root)
        (node-to-cxml-dom root document)))
-    (:fragment
+    (:document-fragment
      (let ((fragment (dom:create-document-fragment document)))
        (element-map-children (lambda (node)
                                (dom:append-child fragment (node-to-cxml-dom node document)))
@@ -38,7 +38,6 @@
        fragment))
     (:element
      (let ((element (dom:create-element document (node-name node))))
-              
        (element-map-attributes (lambda (name namespace value)
                                  (declare (ignore namespace))
                                  (dom:set-attribute element name value))
@@ -52,5 +51,5 @@
     (:comment
      (dom:create-comment document (node-value node)))))
 
-(defmethod transform-html5-dom ((to-type (eql :cxml-dom)) node)
+(defmethod transform-html5-dom ((to-type (eql :cxml)) node)
   (node-to-cxml-dom node))

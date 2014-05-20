@@ -1,5 +1,9 @@
 language: lisp
 
+branches:
+  only:
+    - master
+
 env:
   matrix:
     - LISP=sbcl
