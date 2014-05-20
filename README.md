@@ -1,34 +1,34 @@
 cl-html5-parser: HTML5 parser for Common Lisp
 =============================================
 
-Abstract
---------
+## Abstract
 
 cl-html5-parser is a HTML5 parser for Common Lisp with the following features:
 
-* It is a port of the Python library http://code.google.com/p/html5lib/[html5lib].
+* It is a port of the Python library [html5lib](http://code.google.com/p/html5lib/).
 * It passes all relevant tests from html5lib.
 * It is not tied to a specific DOM implementation.
 
-Requirements
-------------
+
+## Requirements
 
 * SBCL or ECL.
 * CL-PPCRE and FLEXI-STREAMS.
 
 Might work with CLISP, ABCL and Clozure CL, but many of the tests don't pass there.
 
-Usage
------
 
-Parsing
-~~~~~~~
+## Usage
+
+
+### Parsing
 
 Parsing functions are in the package HTML5-PARSER.
 
-~_f_~
-*parse-html5* _source &key encoding strictp dom
-              => document, errors_
+```
+parse-html5 source &key encoding strictp dom
+    => document, errors
+```
 
 Parse an HTML document from source. Source can be a string, a pathname
 or a stream. When parsing from a stream encoding detection is not
@@ -42,29 +42,29 @@ secondary value is a list of errors found during parsing. The format
 of this list is subject to change.
 
 The type of document depends on the dom parameter. By default it's an
-instance of cl-html5-parser's own dom implementation. See the DOM
+instance of cl-html5-parser's own DOM implementation. See the DOM
 paragraph below for more information.
 
-~_f_~
-*parse-html5-fragment* _source &key container encoding strictp dom
-                       => document-fragment, errors_
+```
+parse-html5-fragment source &key container encoding strictp dom
+    => document-fragment, errors
+```
 
 Parses a fragment of HTML. Container sets the context, defaults to
 "div". Returns a document-fragment node. For the other parameters see
-+PARSE-HTML5+.
+`PARSE-HTML5`.
 
-Example
-~~~~~~~
-----------------------------------------------------------------------------------------
+
+### Example
+```
 (html5-parser:parse-html5-fragment "Parse <i>some</i> HTML" :dom :xmls)
 ==> ("Parse " ("i" NIL "some") " HTML")
-----------------------------------------------------------------------------------------
+```
 
-The DOM
-~~~~~~~
+### The DOM
 
 Parsing HTML5 is not possible without a
-http://en.wikipedia.org/wiki/Document_Object_Model[DOM]. cl-html5-parser
+[DOM](http://en.wikipedia.org/wiki/Document_Object_Model). cl-html5-parser
 defines a minimal DOM implementation for this task. Functions for
 traversing documents are exported by the HTML5-PARSER package.
 
@@ -76,30 +76,27 @@ added by defining new methods for this generic function. Below is the
 currently supported target types.
 
 
-:XMLS
-~~~~~
+### :XMLS
 
 Converts a node into a simple
-http://common-lisp.net/project/xmls/[XMLS]-like list structure.
+[XMLS](http://common-lisp.net/project/xmls/)-like list structure.
 If node is a document fragment a list of XMLS nodes a returned. In
 all other cases a single XMLS node is returned.
 
-:XMLS-NS
-~~~~~~~~
+### :XMLS-NS
 
 Like :XMLS, but with namespaces. Tag names are conses of name and
 namespace URI.
 
 
-:CXML
-~~~~~
+### :CXML
 
-Convert to Closure XML Parsers DOM implementation. In order to use
-this you must load/depend on the the system cl-html5-parser-cxml.
+Convert to [Closure XML Parser](http://common-lisp.net/project/cxml/)
+DOM implementation. In order to use this you must load/depend on the
+the system cl-html5-parser-cxml.
 
 
-License
--------
+## License
 
 This library is available under the
-http://www.gnu.org/licenses/lgpl.html[GNU Lesser General Public License v3.0].
+[GNU Lesser General Public License v3.0](http://www.gnu.org/licenses/lgpl.html).
