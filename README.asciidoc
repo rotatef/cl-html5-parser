@@ -91,6 +91,13 @@ Like :XMLS, but with namespaces. Tag names are conses of name and
 namespace URI.
 
 
+:CXML
+~~~~~
+
+Convert to Closure XML Parsers DOM implementation. In order to use
+this you must load/depend on the the system cl-html5-parser-cxml.
+
+
 License
 -------
 
