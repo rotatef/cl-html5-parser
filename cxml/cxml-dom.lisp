@@ -21,36 +21,33 @@
 
 (in-package #:html5-parser)
 
-(defun node-to-cxml-dom (node &optional (document (make-instance 'cxml-dom::document)))
-  (ecase (node-type node)
-    (:document
-     (let (root)
-       (element-map-children (lambda (n)
-                               (when (string= (node-name n) "html")
-                                 (setf root n)))
-                             node)
-       (assert root)
-       (node-to-cxml-dom root document)))
-    (:document-fragment
-     (let ((fragment (dom:create-document-fragment document)))
-       (element-map-children (lambda (node)
-                               (dom:append-child fragment (node-to-cxml-dom node document)))
-                             node)
-       fragment))
-    (:element
-     (let ((element (dom:create-element document (node-name node))))
-       (element-map-attributes (lambda (name namespace value)
-                                 (declare (ignore namespace))
-                                 (dom:set-attribute element name value))
-                               node)
-       (element-map-children (lambda (c)
-                               (dom:append-child element (node-to-cxml-dom c document)))
-                             node)
-       element))
-    (:text
-     (dom:create-text-node document (node-value node)))
-    (:comment
-     (dom:create-comment document (node-value node)))))
-
 (defmethod transform-html5-dom ((to-type (eql :cxml)) node &key)
-  (node-to-cxml-dom node))
+  (let ((document (cxml:parse-empty-document nil nil (cxml-dom:make-dom-builder))))
+    (labels ((walk (node &optional parent)
+               (ecase (node-type node)
+                 (:document
+                  (element-map-children #'walk node)
+                  document)
+                 (:document-type)
+                 (:document-fragment
+                  (let ((fragment (dom:create-document-fragment document)))
+                    (element-map-children (lambda (c)
+                                            (walk c fragment))
+                                          node)
+                    fragment))
+                 (:element
+                  (let ((element (dom:create-element-ns document (node-namespace node) (node-name node))))
+                    (element-map-attributes (lambda (name namespace value)
+                                              (dom:set-attribute-ns element namespace name value))
+                                            node)
+                    (element-map-children (lambda (c)
+                                            (walk c element))
+                                          node)
+                    (dom:append-child (or parent document) element)))
+                 (:text
+                  (dom:append-child (or parent document)
+                                    (dom:create-text-node document (node-value node))))
+                 (:comment
+                  (dom:append-child (or parent document)
+                                    (dom:create-comment document (node-value node)))))))
+      (walk node))))
