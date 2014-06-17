@@ -52,5 +52,5 @@
     (:comment
      (dom:create-comment document (node-value node)))))
 
-(defmethod transform-html5-dom ((to-type (eql :cxml)) node)
+(defmethod transform-html5-dom ((to-type (eql :cxml)) node &key)
   (node-to-cxml-dom node))

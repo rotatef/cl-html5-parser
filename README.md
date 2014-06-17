@@ -72,21 +72,25 @@ Alternativly the parser can be instructed to to convert the document
 into other DOM implemenations using the dom parameter. The convertion
 is done by simply calling the generic function
 transform-html5-dom. Support for other DOM implementations can be
-added by defining new methods for this generic function. Below is the
-currently supported target types.
+added by defining new methods for this generic function. The dom
+parameter is either a symbol or a list where the car is a symbol and
+the rest is key arguments. Below is the currently supported target
+types.
 
 
-### :XMLS
+### :XMLS or (:XMLS &key namespace comments)
 
 Converts a node into a simple
 [XMLS](http://common-lisp.net/project/xmls/)-like list structure.
 If node is a document fragment a list of XMLS nodes a returned. In
 all other cases a single XMLS node is returned.
 
-### :XMLS-NS
-
-Like :XMLS, but with namespaces. Tag names are conses of name and
+If namespace argument is true, tag names are conses of name and
 namespace URI.
+
+By default comments are stripped. If comments argument is true,
+comments are returned as (:COMMENT NIL "comment text"). This extension
+of XMLS format.
 
 
 ### :CXML

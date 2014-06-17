@@ -36,7 +36,11 @@
                            :container container
                            :dom dom))
 
-(defgeneric transform-html5-dom (to-type node))
+(defgeneric transform-html5-dom (to-type node &key)
+  (:method ((to-type cons) node &key)
+    (apply #'transform-html5-dom (car to-type) node (cdr to-type)))
+  (:method (to-type node &key &allow-other-keys)
+    (error "No TRANSFORM-HTML5-DOM method defined for dom type ~S." to-type)))
 
 
 ;; internal
