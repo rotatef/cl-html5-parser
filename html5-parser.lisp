@@ -22,19 +22,21 @@
 
 ;; external interface
 
-(defun parse-html5 (source &key encoding strictp container dom)
+(defun parse-html5 (source &key encoding strictp container dom token-handler)
   (parse-html5-from-source source
                            :encoding encoding
                            :strictp strictp
                            :container container
-                           :dom dom))
+                           :dom dom
+                           :token-handler token-handler))
 
-(defun parse-html5-fragment (source &key encoding strictp (container "div") dom)
+(defun parse-html5-fragment (source &key encoding strictp (container "div") dom token-handler)
   (parse-html5-from-source source
                            :encoding encoding
                            :strictp strictp
                            :container container
-                           :dom dom))
+                           :dom dom
+                           :token-handler token-handler))
 
 (defgeneric transform-html5-dom (to-type node &key)
   (:method ((to-type cons) node &key)
@@ -45,12 +47,13 @@
 
 ;; internal
 
-(defun parse-html5-from-source (source &key container encoding strictp dom)
+(defun parse-html5-from-source (source &key container encoding strictp dom token-handler)
   (let ((*parser* (make-instance 'html-parser
                                  :strict strictp)))
     (parser-parse source
                   :fragment-p container
-                  :encoding encoding)
+                  :encoding encoding
+                  :token-handler token-handler)
     (with-slots (open-elements errors) *parser*
       (let ((document
              (if container
@@ -82,7 +85,7 @@
        (not (equal (node-namespace (last-open-element))
                    (slot-value *parser* 'html-namespace)))))
 
-(defun parser-parse (source &key fragment-p encoding)
+(defun parser-parse (source &key fragment-p encoding token-handler)
   (with-slots (inner-html-mode container tokenizer)
       *parser*
     (setf inner-html-mode fragment-p)
@@ -97,7 +100,7 @@
           ;; The input stream will throw please-reparse with result true
           ;; if the encoding is changed
           while (catch 'please-reparse
-                  (main-loop)
+                  (main-loop token-handler)
                   nil)
           do (parser-reset))))
 
@@ -152,11 +155,16 @@
           +mathml-text-integration-point-elements+
           :test #'equal))
 
-(defun main-loop ()
+(defun main-loop (token-handler)
+  (check-type token-handler (or null function))
   (with-slots (tokenizer phase)
       *parser*
-    (map-tokens tokenizer (lambda (token)
-                            (process-token (normalize-token token))))
+    (let ((token-handler
+            (if (null token-handler)
+                #'process-token
+                token-handler)))
+      (map-tokens tokenizer (lambda (token)
+                              (funcall token-handler (normalize-token token)))))
     (loop with reprocess = t
        with phases = '()
        while reprocess do
@@ -166,6 +174,7 @@
            (assert (not (member phase phases)))))))
 
 (defun process-token (token)
+  "The default token handler."
   (with-slots (tokenizer last-open-element html-namespace)
       *parser*
     (let ((new-token token)
