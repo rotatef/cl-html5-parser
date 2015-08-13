@@ -13,4 +13,4 @@ install:
   - curl -L https://github.com/luismbo/cl-travis/raw/master/install.sh | sh
 
 script:
-  - cl-launch -i "(ql:quickload :cl-html5-parser) (ql:quickload :cl-html5-parser-tests) (html5-parser-tests::run-html5-parser-tests)"
+  - cl -e "(ql:quickload :cl-html5-parser) (ql:quickload :cl-html5-parser-tests) (html5-parser-tests::run-html5-parser-tests)"
