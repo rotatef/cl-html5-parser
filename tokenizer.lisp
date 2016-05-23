@@ -73,10 +73,9 @@ pointer at the end."
           (make-array (max 5 (length init))
                       :element-type 'character
                       :adjustable t
-                      :fill-pointer 0)))
+                      :fill-pointer (length init))))
     (when init
-      (loop for c across init
-            do (vector-push-extend c string (length string))))
+      (replace string init))
     string))
 
 (defun nconcat (string &rest data)
