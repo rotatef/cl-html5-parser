@@ -56,11 +56,14 @@
   (:use
    :common-lisp
    :html5-constants
-   :cl-ppcre)
+   :cl-ppcre
+   :mezzano.file-system.http)
+
   (:export
    #:parse-html5
    #:parse-html5-fragment
    #:transform-html5-dom
+   #:parse-web-page
 
    ;; A simple DOM
    #:make-document

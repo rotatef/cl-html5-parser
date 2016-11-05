@@ -298,7 +298,7 @@
     ,@(char-range #\u007F #\u009F)
     ;; The following are noncharacter as defined by Unicode.
     ;; Clozure Common Lisp doesn't like them.
-    #-(or abcl ccl) ,@`(
+    #-(or abcl ccl mezzano) ,@`(
     ,@(char-range #\uD800 #\uDFFF)
     ,@(char-range #\uFDD0 #\uFDEF)
     #\uFFFE

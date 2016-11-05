@@ -2852,3 +2852,20 @@
   (parser-parse-error :expected-eof-but-got-end-tag
                       `(:name (getf token :name)))
   nil)
+
+(defun concat-strings (list)
+  (reduce (lambda (a b)
+            (concatenate 'string a b))
+          (remove-if-not #'stringp list)))
+
+(defun get-file (filename)
+  (with-open-file (stream filename)
+    (loop for line = (read-line stream nil)
+          while line
+          collect line)))
+
+(defun parse-web-page(url)
+  (let ((webpage-string ""))
+    
+	   (setq webpage-string (concat-strings(get-file url)))
+	    (html5-parser:parse-html5-fragment webpage-string :dom :xmls)))
