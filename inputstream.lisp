@@ -26,9 +26,7 @@
 
 (deftype chunk ()
   "Type of the input stream buffer."
-  '#.(type-of (make-array (* 10 1024)
-                          :element-type 'character
-                          :fill-pointer 0)))
+  '(vector character *))
 
 (defparameter *default-encoding* :utf-8)
 
