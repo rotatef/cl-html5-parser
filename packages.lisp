@@ -61,6 +61,7 @@
    #:parse-html5
    #:parse-html5-fragment
    #:transform-html5-dom
+   #:process-token
 
    ;; A simple DOM
    #:make-document
