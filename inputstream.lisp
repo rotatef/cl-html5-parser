@@ -153,7 +153,7 @@
              :utf-16le)
             ((and (eql byte-0 #xef)
                   (eql byte-1 #xbb)
-                  (eql byte-1 #xbf))
+                  (eql byte-2 #xbf))
              :utf-8)))))
 
 ;; 12.2.2.3 Changing the encoding while parsing
