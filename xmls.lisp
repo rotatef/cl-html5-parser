@@ -24,7 +24,7 @@
                                 &key namespace comments)
   "Convert a node into an XMLS-compatible tree of conses, starting
 at. If the node is a document-fragement a list of XMLS trees is returned."
-  (labels ((node-to-xmls (node)
+  (labels ((node-to-xmls (node parent-ns xlink-defined)
            (ecase (node-type node)
              (:document
               (let (root)
@@ -33,38 +33,45 @@ at. If the node is a document-fragement a list of XMLS trees is returned."
                                           (setf root n)))
                                       node)
                 (assert root)
-                (node-to-xmls root)))
+                (node-to-xmls root parent-ns xlink-defined)))
              (:document-fragment
               (let (xmls-nodes)
                 (element-map-children (lambda (node)
-                                        (push (node-to-xmls node)
+                                        (push (node-to-xmls node parent-ns xlink-defined)
                                               xmls-nodes))
                                       node)
                 (nreverse xmls-nodes)))
              (:element
               (let (attrs children)
-                (element-map-attributes (lambda (name namespace value)
-                                          (declare (ignore namespace))
-                                          (push (list name value) attrs))
+                (element-map-attributes (lambda (name node-namespace value)
+                                          (when (and namespace
+                                                     (not xlink-defined)
+                                                     (equal node-namespace (html5-constants:find-namespace "xlink")))
+                                            (push '#.(list "xmlns:xlink" (html5-constants:find-namespace "xlink")) attrs)
+                                            (setf xlink-defined t))
+                                          (push (list name
+                                                      value)
+                                                attrs))
                                         node)
                 (element-map-children (lambda (c)
                                         (push c children))
                                       node)
 
                 (apply #'list
-                       (if namespace
+                       (if (and namespace
+                                (not (equal parent-ns (node-namespace node))))
                            (cons (node-name node) (node-namespace node))
                            (node-name node))
                        attrs
                        (mapcar (lambda (c)
-                                 (node-to-xmls c))
+                                 (node-to-xmls c (node-namespace node) xlink-defined))
                                (nreverse children)))))
              (:text
               (node-value node))
              (:comment
               (when comments
                 (list :comment nil (node-value node)))))))
-    (node-to-xmls node)))
+    (node-to-xmls node nil nil)))
 
 (defmethod transform-html5-dom ((to-type (eql :xmls-ns)) node &key)
   (transform-html5-dom :xmls node :namespace t))

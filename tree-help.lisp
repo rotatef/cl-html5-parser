@@ -56,7 +56,7 @@
      (make-text-node (document*) (node-value node)))
     (:element
      (let ((clone (make-element (document*) (node-name node) (node-namespace node))))
-       (element-map-attributes
+       (element-map-attributes*
         (lambda (name namespace value)
           (setf (element-attribute clone name namespace) value))
         node)
@@ -77,7 +77,7 @@
 
 (defun node-attributes= (node1 node2)
   (labels ((has-all-attributes-of (node1 node2)
-             (element-map-attributes
+             (element-map-attributes*
               (lambda (name namespace value)
                 (unless (equal value
                                (element-attribute node2 name namespace))
@@ -274,9 +274,9 @@
          (let* ((element (insert-element (list :type :start-tag
                                                :name (node-name entry)
                                                :namespace (node-namespace entry)))))
-           (element-map-attributes (lambda (name namespace value)
-                                     (setf (element-attribute element name namespace) value))
-                                   entry)
+           (element-map-attributes* (lambda (name namespace value)
+                                      (setf (element-attribute element name namespace) value))
+                                    entry)
 
            ;; Step 10
            (setf (elt active-formatting-elements i) element)

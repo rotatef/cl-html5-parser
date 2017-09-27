@@ -152,10 +152,20 @@
 (defun element-map-children (function node)
   (map nil function (%node-child-nodes node)))
 
-(defun element-map-attributes (function node)
+(defun element-map-attributes* (function node)
   (loop for ((name . namespace) . value) in (%node-attributes node)
         do (funcall function name namespace value)))
 
+(defun element-map-attributes (function node)
+  (element-map-attributes*
+   (lambda (name namespace value)
+     (funcall function
+              (if namespace
+                  (format nil "~A:~A" (html5-constants:find-prefix namespace) name)
+                  name)
+              namespace
+              value))
+   node))
 
 ;;
 ;; Printing for the ease of debugging

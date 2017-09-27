@@ -22,27 +22,44 @@
 (in-package #:html5-parser)
 
 (defmethod transform-html5-dom ((to-type (eql :cxml)) node &key)
-  (let ((document (cxml:parse-empty-document nil nil (cxml-dom:make-dom-builder))))
-    (labels ((walk (node &optional parent)
+  (let ((document-type)
+        (document)
+        (document-fragment))
+    (labels ((walk (node &optional parent xlink-defined)
                (ecase (node-type node)
+                 (:document-type
+                  (setf document-type (dom:create-document-type 'rune-dom:implementation
+                                                                (node-name node)
+                                                                (node-public-id node)
+                                                                (node-system-id node))))
                  (:document
-                  (element-map-children #'walk node)
-                  document)
-                 (:document-type)
+                  (element-map-children #'walk node))
                  (:document-fragment
-                  (let ((fragment (dom:create-document-fragment document)))
-                    (element-map-children (lambda (c)
-                                            (walk c fragment))
-                                          node)
-                    fragment))
+                  (setf document (dom:create-document 'rune-dom:implementation nil nil nil))
+                  (setf document-fragment (dom:create-document-fragment document))
+                  (element-map-children (lambda (c) (walk c document-fragment xlink-defined)) node))
                  (:element
-                  (let ((element (dom:create-element-ns document (node-namespace node) (node-name node))))
+                  (let ((element
+                          (if document
+                              (dom:create-element-ns document (node-namespace node) (node-name node))
+                              (dom:document-element
+                               (setf document (dom:create-document 'rune-dom:implementation
+                                                                   (node-namespace node)
+                                                                   (node-name node)
+                                                                   document-type))))))
+                    (unless (and parent
+                                 (equal (node-namespace node) (dom:namespace-uri parent)))
+                      (dom:set-attribute element "xmlns" (node-namespace node)))
                     (element-map-attributes (lambda (name namespace value)
-                                              (dom:set-attribute-ns element namespace name value))
+                                              (when (and (not xlink-defined)
+                                                         (equal namespace (html5-constants:find-namespace "xlink")))
+                                                (dom:set-attribute element "xmlns:xlink" (html5-constants:find-namespace "xlink"))
+                                                (setf xlink-defined t))
+                                              (if namespace
+                                                  (dom:set-attribute-ns element namespace name value)
+                                                  (dom:set-attribute element name value)))
                                             node)
-                    (element-map-children (lambda (c)
-                                            (walk c element))
-                                          node)
+                    (element-map-children (lambda (c) (walk c element xlink-defined)) node)
                     (dom:append-child (or parent document) element)))
                  (:text
                   (dom:append-child (or parent document)
@@ -50,4 +67,5 @@
                  (:comment
                   (dom:append-child (or parent document)
                                     (dom:create-comment document (node-value node)))))))
-      (walk node))))
+      (walk node))
+    (or document-fragment document)))

@@ -58,9 +58,9 @@
      (print-node node stream)
      (incf indent 2)
      (let ((attributes))
-       (element-map-attributes (lambda (name namespace value)
-                                 (push (cons (cons name namespace) value) attributes))
-                            node)
+       (element-map-attributes* (lambda (name namespace value)
+                                  (push (cons (cons name namespace) value) attributes))
+                                node)
        (when attributes
          (loop for (name . value) in (sort attributes #'string<
                                            :key (lambda (attr)
