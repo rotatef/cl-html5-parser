@@ -322,7 +322,7 @@
                              ("xml:base" . ("xml" "base" ,(find-namespace "xml")))
                              ("xml:lang" . ("xml" "lang" ,(find-namespace "xml")))
                              ("xml:space" . ("xml" "space" ,(find-namespace "xml")))
-                             ("xmlns" . (nil "xmlns" (find-namespace "xmlns")))
+                             ("xmlns" . (nil "xmlns" ,(find-namespace "xmlns")))
                              ("xmlns:xlink" . ("xmlns" "xlink" ,(find-namespace "xmlns"))))))
 
 (defun reset-insertion-mode ()
