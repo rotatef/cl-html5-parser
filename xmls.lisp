@@ -20,6 +20,7 @@
 
 (in-package #:html5-parser)
 
+
 (defmethod transform-html5-dom ((to-type (eql :xmls)) node
                                 &key namespace comments)
   "Convert a node into an XMLS-compatible tree of conses, starting
@@ -49,7 +50,9 @@ at. If the node is a document-fragement a list of XMLS trees is returned."
                                                      (equal node-namespace (html5-constants:find-namespace "xlink")))
                                             (push '#.(list "xmlns:xlink" (html5-constants:find-namespace "xlink")) attrs)
                                             (setf xlink-defined t))
-                                          (push (list name
+                                          (push (list (if node-namespace
+                                                          name
+                                                          (xml-escape-name name))
                                                       value)
                                                 attrs))
                                         node)
@@ -61,7 +64,7 @@ at. If the node is a document-fragement a list of XMLS trees is returned."
                        (if (and namespace
                                 (not (equal parent-ns (node-namespace node))))
                            (cons (node-name node) (node-namespace node))
-                           (node-name node))
+                           (xml-escape-name (node-name node)))
                        attrs
                        (mapcar (lambda (c)
                                  (node-to-xmls c (node-namespace node) xlink-defined))
@@ -72,6 +75,7 @@ at. If the node is a document-fragement a list of XMLS trees is returned."
               (when comments
                 (list :comment nil (node-value node)))))))
     (node-to-xmls node nil nil)))
+
 
 (defmethod transform-html5-dom ((to-type (eql :xmls-ns)) node &key)
   (transform-html5-dom :xmls node :namespace t))

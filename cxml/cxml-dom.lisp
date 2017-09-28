@@ -21,6 +21,7 @@
 
 (in-package #:html5-parser)
 
+
 (defmethod transform-html5-dom ((to-type (eql :cxml)) node &key)
   (let ((document-type)
         (document)
@@ -29,7 +30,7 @@
                (ecase (node-type node)
                  (:document-type
                   (setf document-type (dom:create-document-type 'rune-dom:implementation
-                                                                (node-name node)
+                                                                (xml-escape-name (node-name node))
                                                                 (node-public-id node)
                                                                 (node-system-id node))))
                  (:document
@@ -41,11 +42,11 @@
                  (:element
                   (let ((element
                           (if document
-                              (dom:create-element-ns document (node-namespace node) (node-name node))
+                              (dom:create-element-ns document (node-namespace node) (xml-escape-name (node-name node)))
                               (dom:document-element
                                (setf document (dom:create-document 'rune-dom:implementation
                                                                    (node-namespace node)
-                                                                   (node-name node)
+                                                                   (xml-escape-name (node-name node))
                                                                    document-type))))))
                     (unless (and parent
                                  (equal (node-namespace node) (dom:namespace-uri parent)))
@@ -57,7 +58,7 @@
                                                 (setf xlink-defined t))
                                               (if namespace
                                                   (dom:set-attribute-ns element namespace name value)
-                                                  (dom:set-attribute element name value)))
+                                                  (dom:set-attribute element (xml-escape-name name) value)))
                                             node)
                     (element-map-children (lambda (c) (walk c element xlink-defined)) node)
                     (dom:append-child (or parent document) element)))

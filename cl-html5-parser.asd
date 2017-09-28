@@ -34,6 +34,7 @@
                (:file "html5-parser-class")
                (:file "tree-help")
                (:file "html5-parser")
+               (:file "toxml")
                (:file "xmls")))
 
 (defsystem #:cl-html5-parser-tests

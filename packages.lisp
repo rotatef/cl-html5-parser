@@ -62,6 +62,9 @@
    #:parse-html5-fragment
    #:transform-html5-dom
 
+   #:xml-escape-name
+   #:xml-unescape-name
+
    ;; A simple DOM
    #:make-document
    #:make-fragment

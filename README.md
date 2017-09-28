@@ -56,7 +56,7 @@ Parses a fragment of HTML. Container sets the context, defaults to
 
 
 ### Example
-```
+```common-lisp
 (html5-parser:parse-html5-fragment "Parse <i>some</i> HTML" :dom :xmls)
 ==> ("Parse " ("i" NIL "some") " HTML")
 ```
@@ -68,8 +68,8 @@ Parsing HTML5 is not possible without a
 defines a minimal DOM implementation for this task. Functions for
 traversing documents are exported by the HTML5-PARSER package.
 
-Alternativly the parser can be instructed to to convert the document
-into other DOM implemenations using the dom parameter. The convertion
+Alternatively the parser can be instructed to to convert the document
+into other DOM implementations using the dom parameter. The conversion
 is done by simply calling the generic function
 transform-html5-dom. Support for other DOM implementations can be
 added by defining new methods for this generic function. The dom
@@ -77,6 +77,56 @@ parameter is either a symbol or a list where the car is a symbol and
 the rest is key arguments. Below is the currently supported target
 types.
 
+
+### Namespace of elements and attributes
+
+The HTML5 syntax has no support for namespaces, however the standard
+defines special rules to set the expected namespace for SVG and MathML
+elements and the following attributes: `xlink:actuate`,
+`xlink:arcrole`, `xlink:href`, `xlink:role`, `xlink:show`,
+`xlink:title`, `xlink:type`, `xml:base`, `xml:lang`, `xml:space`,
+`xmlns`, `xmlns:xlink`. Please note that this only applies to SVG and
+MathML elements. Attributes of HTML elements will never get a
+namespace.
+
+#### Examples
+
+```html
+<html xml:lang='en'><svg xml:lang='en></svg></html>
+```
+
+* Element `html` with namespace `http://www.w3.org/1999/xhtml`
+* Attribute with name `xml:lang` (no prefix)
+* Element `svg` with namespace `http://www.w3.org/2000/svg`
+* Attribute with prefix `xml`, local name `lang`, namespace `http://www.w3.org/XML/1998/namespace`
+
+```common-lisp
+(html5-parser:parse-html5 "<!doctype html><html xml:lang='en' xml@lang='en'>" :dom :xmls-ns)
+==>
+(("html" . "http://www.w3.org/1999/xhtml")
+ (("xmlU00003Alang" "en") ("xmlU000040lang" "en")) ("head" NIL) ("body" NIL))
+```
+
+On an HTML element `xml:lang` and `xml@lang` are just attributes with
+unusual characters in their name. In the HTML DOM these names are kept
+as is, but when converting to XML they are escaped, to ensure the XML
+becomes valid. This escaping can be reversed with
+`HTML5-PARSER:XML-UNESCAPE-NAME`.
+
+```common-lisp
+(html5-parser:parse-html5 "<!doctype html><svg xml:lang='en' xml@lang='en' xlink:href='#' xlink:to='#'></svg>" :dom :xmls-ns)
+==>
+(("html" . "http://www.w3.org/1999/xhtml") NIL ("head" NIL)
+ ("body" NIL
+  (("svg" . "http://www.w3.org/2000/svg")
+   (("xml:lang" "en") ("xmlU000040lang" "en") ("xlink:href" "#")
+    ("xmlns:xlink" "http://www.w3.org/1999/xlink") ("xlinkU00003Ato" "#")))))
+```
+
+In this case the `xml:lang` and `xmlns:xlink` is one of those
+attributes with known namespace when used on SVG and MathML
+elements. However `xlink:to` is not the list, even if it's defined in
+the xlink standard.
 
 ### :XMLS or (:XMLS &key namespace comments)
 
