@@ -1,4 +1,5 @@
 language: lisp
+sudo: required
 
 branches:
   only:
