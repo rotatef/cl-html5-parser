@@ -19,7 +19,7 @@
 ;;;;  along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
 (defsystem #:cl-html5-parser-tests
-  :depends-on (:cl-html5-parser :stefil :cl-json :split-sequence)
+  :depends-on (:cl-html5-parser :stefil :json-streams :split-sequence)
   :components ((:file "packages")
                (:file "support")
                (:file "test-inputstream")
