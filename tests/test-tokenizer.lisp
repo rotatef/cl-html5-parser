@@ -112,15 +112,14 @@
 
 (defun utf16-string-to-octets (string)
   (when string
-    (coerce (loop for c across string
-               for i = (char-code c)
-               collect (ldb (byte 8 0) i)
-               collect (ldb (byte 8 8) i))
+    (coerce (loop for i in (cdr string)
+                  collect (ldb (byte 8 0) i)
+                  collect (ldb (byte 8 8) i))
             '(vector (unsigned-byte 8)))))
 
 (defun double-unescape (string)
   (when string
-    (json:decode-json-from-string (format nil "\"~A\"" string))))
+    (json-streams:json-parse (format nil "\"~A\"" (from-raw-string string)) :raw-strings t)))
 
 (defun data-to-octects (string double-escaped)
   (when string
@@ -130,77 +129,107 @@
 
 (defun fix-output (output double-escaped)
   (flet ((unescape (string)
-           (when string
+           (when (consp string)
              (flex:octets-to-string (data-to-octects string double-escaped)
                                     :external-format :utf-16le))))
-    (loop for value in output collect
-         (if (consp value)
-             (cond ((string= "Character" (car value))
-                    (assert (= 2 (length value)))
-                    (list :type :characters :data (unescape (second value))))
-                   ((string= "Comment" (car value))
-                    (assert (= 2 (length value)))
-                    (list :type :comment :data (unescape (second value))))
-                   ((string= "StartTag" (car value))
-                    (assert (<= 3 (length value) 4))
-                    (list :type :start-tag
-                          :name (unescape (second value))
-                          :data (loop for (attr . attr-value) in (third value)
-                                   collect (cons (unescape (string attr))
-                                                 (unescape attr-value)))
-                          :self-closing (fourth value)))
-                   ((string= "EndTag" (car value))
-                    (assert (= 2 (length value)))
-                    (list :type :end-tag :name (unescape (second value))))
-                   ((string= "DOCTYPE" (car value))
-                    (assert (= 5 (length value)))
-                    (list :type :doctype
-                          :name (unescape (second value))
-                          :public-id (unescape (third value))
-                          :system-id (unescape (fourth value))
-                          :correct (fifth value)))
-                   (t (error "Unexpected token type ~S" (car value))))
-             (if (equal "ParseError" value)
-                 (list :type :parse-error)
-                 (error "Unexpected token type ~S" value))))))
+    (loop for value in output
+          collect
+          (if (and (consp value) (eql :array (car value)))
+              (let ((value (cdr value)))
+                (flet ((is (name)
+                         (equal (to-raw-string name) (car value))))
+                  (cond ((is "Character")
+                         (assert (= 2 (length value)))
+                         (list :type :characters :data (unescape (second value))))
+                        ((is "Comment")
+                         (assert (= 2 (length value)))
+                         (list :type :comment :data (unescape (second value))))
+                        ((is "StartTag")
+                         (assert (<= 3 (length value) 4))
+                         (list :type :start-tag
+                               :name (unescape (second value))
+                               :data (loop for (attr . attr-value) in (cdr (third value))
+                                           collect (cons (unescape attr)
+                                                         (unescape attr-value)))
+                               :self-closing (fourth value)))
+                        ((is "EndTag")
+                         (assert (= 2 (length value)))
+                         (list :type :end-tag :name (unescape (second value))))
+                        ((is "DOCTYPE")
+                         (assert (= 5 (length value)))
+                         (list :type :doctype
+                               :name (unescape (second value))
+                               :public-id (unescape (third value))
+                               :system-id (unescape (fourth value))
+                               :correct (fifth value)))
+                        (t (error "Unexpected token type ~S" (car value))))))
+              (if (equal (to-raw-string "ParseError") value)
+                  (list :type :parse-error)
+                  (error "Unexpected token type ~S" value))))))
 
 (defun find-state-symbol (string)
   (let ((symbol (find-symbol (substitute #\- #\Space (string-upcase string)) :keyword)))
     (assert symbol () "Unkown state ~S" string)
     symbol))
 
+(defun to-raw-string (string)
+  (cons :string (map 'list #'char-code string)))
+
+(defun from-raw-string (raw-string)
+  (when (consp raw-string)
+    (map 'string #'code-char (cdr raw-string))))
+
+(defun jget (json key &rest more-keys)
+  "Access data from json object. Key is one of
+an integer - expects an array, returns element indexed by key
+a string - expectes an object, returns element matching key (using equal)
+:array - expects an array, returns the items of the array
+:object - expects an object, returns the items of the object, alist
+
+Suppling more-keys will result in recursive application of jget with the result of the previous key lookup as the json object."
+  (when json
+    (let ((value (etypecase key
+                   ((member :object)
+                    (assert (eq :object (car json)) (json) "Not a JSON object")
+                    (cdr json))
+                   ((member :array)
+                    (assert (eq :array (car json)) (json) "Not a JSON array")
+                    (cdr json))
+                   (integer
+                    (elt (jget json :array) key))
+                   (string
+                    (cdr (assoc (to-raw-string key) (jget json :object) :test #'equal)))
+                   ((member :string)
+                    (assert (eq :string (car json)) (json) "Not a JSON string")
+                    (from-raw-string json)))))
+      (if more-keys
+          (apply #'jget value more-keys)
+          (if (eq :null value)
+              (values)
+              value)))))
+
 (defun load-tests (filename)
-  (loop for test in (cdr (assoc :|tests|
-                                (let ((json:*json-identifier-name-to-lisp* #'identity))
-                                  (json:decode-json-from-source filename))))
-     for double-escaped = (cdr (assoc :|doubleEscaped| test))
-     for parsed =
-       (loop for (key . value) in test
-          append (ecase key
-                   (:|description|
-                     (list :description value))
-                   (:|initialStates|
-                     (list :initial-states (mapcar #'find-state-symbol value)))
-                   (:|lastStartTag|
-                     (list :last-start-tag value))
-                   (:|input|
-                     (list :input (data-to-octects value double-escaped)))
-                   (:|output|
-                     (list :output
-                           (fix-output value double-escaped)))
-                   (:|doubleEscaped|
-                     (list :double-escaped value))
-                   (:|ignoreErrorOrder|
-                     (list :ignore-error-order value))))
-       do (unless (getf parsed :initial-states)
-            (setf parsed `(,@parsed :initial-states (:data-state))))
-       collect parsed))
+  (with-open-file (in filename)
+    (loop for test in (jget (json-streams:json-parse in :raw-strings t) "tests" :array)
+          for double-escaped = (jget test "doubleEscaped")
+          collect (list :description (jget test "description" :string)
+                        :initial-states (or (loop for raw in (jget test "initialStates" :array)
+                                                  collect (find-state-symbol (jget raw :string)))
+                                            '(:data-state))
+                        :last-start-tag (jget test "lastStartTag" :string)
+                        :input (data-to-octects (jget test "input") double-escaped)
+                        :output (fix-output (jget test "output" :array) double-escaped)
+                        :double-escaped double-escaped
+                        :ignore-error-order (jget test "ignoreErrorOrder")))))
 
 (defparameter *skip-tests*
   '(("domjs"
      "--!NUL in comment ") ; to many ParseErrors. Wrong test?
-    ("unicodeCharsProblematic" :skip) ; flexi-streams locks up on some of these tests.
-    ))
+    ("unicodeCharsProblematic"
+     ;; Hangs on the following test, due to bug in flexi-streams
+     "Invalid Unicode character U+DFFF with valid preceding character"
+     ;; The valid "a" character is consumed
+     "Invalid Unicode character U+D800 with valid following character")))
 
 (defun test-tokenizer ()
   (loop for filename in (html5lib-test-files "tokenizer" :type "test")
