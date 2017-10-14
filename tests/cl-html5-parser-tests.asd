@@ -18,27 +18,12 @@
 ;;;;  You should have received a copy of the GNU General Public License
 ;;;;  along with this library.  If not, see <http://www.gnu.org/licenses/>.
 
-(defsystem #:cl-html5-parser
-  :name "cl-html5-parser"
-  :description "A HTML5 parser for Common Lisp"
-  :licence "GNU Lesser General Public License"
-  :author "Thomas Bakketun <thomas.bakketun@copyleft.no>"
-  :depends-on (:cl-ppcre :flexi-streams :string-case)
-  :serial t
+(defsystem #:cl-html5-parser-tests
+  :depends-on (:cl-html5-parser :stefil :cl-json :split-sequence)
   :components ((:file "packages")
-               (:file "constants")
-               (:file "entities")
-               (:file "inputstream")
-               (:file "tokenizer")
-               (:file "simple-tree")
-               (:file "html5-parser-class")
-               (:file "tree-help")
-               (:file "html5-parser")
-               (:file "toxml")
-               (:file "xmls")))
-
-
-(defmethod perform ((o test-op) (c (eql (find-system '#:cl-html5-parser))))
-  (operate 'load-op '#:cl-html5-parser-tests)
-  (funcall (find-symbol (string :run-html5-parser-tests)
-                        :html5-parser-tests)))
+               (:file "support")
+               (:file "test-inputstream")
+               (:file "test-tokenizer")
+               (:file "test-tree-builder")
+               (:file "test-parser")
+               (:file "run-tests")))

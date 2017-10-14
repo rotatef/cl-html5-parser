@@ -1,6 +1,6 @@
 ;;;;  HTML5 parser for Common Lisp
 ;;;;
-;;;;  Copyright (C) 2012 Thomas Bakketun <thomas.bakketun@copyleft.no>
+;;;;  Copyright (C) 2017 Thomas Bakketun <thomas.bakketun@copyleft.no>
 ;;;;  Copyright (C) 2012 Asgeir Bjørlykke <asgeir@copyleft.no>
 ;;;;  Copyright (C) 2012 Mathias Hellevang
 ;;;;  Copyright (C) 2012 Stian Sletner <stian@copyleft.no>
@@ -24,7 +24,7 @@
   (directory (merge-pathnames (make-pathname :directory `(:relative ,subdirectory)
                                              :name :wild
                                              :type type)
-                              (asdf:system-relative-pathname :cl-html5-parser-tests "tests/testdata/"))))
+                              (asdf:system-relative-pathname :cl-html5-parser-tests "testdata/"))))
 
 (defun parse-test-part (in)
   (let ((line (read-line in nil)))
