@@ -50,7 +50,8 @@
                                                                    document-type))))))
                     (unless (and parent
                                  (equal (node-namespace node) (dom:namespace-uri parent)))
-                      (dom:set-attribute element "xmlns" (node-namespace node)))
+                      (dom:set-attribute-ns element (html5-constants:find-namespace "xmlns")
+                                            "xmlns" (node-namespace node)))
                     (element-map-attributes (lambda (name namespace value)
                                               (when (and (not xlink-defined)
                                                          (equal namespace (html5-constants:find-namespace "xlink")))
