@@ -25,8 +25,14 @@
 (defmethod transform-html5-dom ((to-type (eql :cxml)) node &key)
   (let ((document-type)
         (document)
-        (document-fragment))
-    (labels ((walk (node &optional parent xlink-defined)
+        (document-fragment)
+        (delayed))
+    (labels ((add-delayed ()
+               (loop
+                 for value in (nreverse delayed)
+                 do (dom:append-child document (dom:create-comment document value))
+                 finally (setf delayed NIL)))
+             (walk (node &optional parent xlink-defined)
                (ecase (node-type node)
                  (:document-type
                   (setf document-type (dom:create-document-type 'rune-dom:implementation
@@ -37,17 +43,19 @@
                   (element-map-children #'walk node))
                  (:document-fragment
                   (setf document (dom:create-document 'rune-dom:implementation nil nil nil))
+                  (add-delayed)
                   (setf document-fragment (dom:create-document-fragment document))
                   (element-map-children (lambda (c) (walk c document-fragment xlink-defined)) node))
                  (:element
                   (let ((element
                           (if document
                               (dom:create-element-ns document (node-namespace node) (xml-escape-name (node-name node)))
-                              (dom:document-element
-                               (setf document (dom:create-document 'rune-dom:implementation
-                                                                   (node-namespace node)
-                                                                   (xml-escape-name (node-name node))
-                                                                   document-type))))))
+                              (prog1 (dom:document-element
+                                      (setf document (dom:create-document 'rune-dom:implementation
+                                                                          (node-namespace node)
+                                                                          (xml-escape-name (node-name node))
+                                                                          document-type)))
+                                (add-delayed)))))
                     (unless (and parent
                                  (equal (node-namespace node) (dom:namespace-uri parent)))
                       (dom:set-attribute-ns element (html5-constants:find-namespace "xmlns")
@@ -67,7 +75,10 @@
                   (dom:append-child (or parent document)
                                     (dom:create-text-node document (node-value node))))
                  (:comment
-                  (dom:append-child (or parent document)
-                                    (dom:create-comment document (node-value node)))))))
+                  (let ((value (node-value node)))
+                    (if document
+                        (dom:append-child (or parent document)
+                                          (dom:create-comment document value))
+                        (push value delayed)))))))
       (walk node))
     (or document-fragment document)))
